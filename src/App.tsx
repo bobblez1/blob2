@@ -4,11 +4,11 @@ import Dashboard from './components/Dashboard';
 import Store from './components/Store';
 import Settings from './components/Settings';
 import HomeScreen from './components/HomeScreen';
-import { GameProvider } from './context/GameContext'; // Removed useGame import
+import { GameProvider } from './context/GameContext';
 
 export type Screen = 'home' | 'game' | 'dashboard' | 'store' | 'settings';
 
-function App() { // Reverted AppContent back to App
+function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
 
   const renderScreen = () => {
@@ -35,7 +35,7 @@ function App() { // Reverted AppContent back to App
 
   return (
     <GameProvider>
-      <div className="h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex flex-col overflow-hidden">
+      <div className="h-screen flex flex-col overflow-hidden"> {/* Removed bg-gradient-to-br classes */}
         {renderScreen()}
       </div>
     </GameProvider>

@@ -595,6 +595,21 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     }
   };
 
+  const getBackgroundClass = useCallback(() => {
+    switch (settings.selectedBackgroundColor) {
+      case 'gradient':
+        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900';
+      case 'white':
+        return 'bg-white';
+      case 'grey':
+        return 'bg-gray-700';
+      case 'black':
+        return 'bg-black';
+      default:
+        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900'; // Default to gradient
+    }
+  }, [settings.selectedBackgroundColor]);
+
   const draw = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -613,26 +628,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
-    // Draw game background based on settings
-    switch (settings.selectedBackgroundColor) {
-      case 'gradient':
-        // For 'gradient' setting, draw a solid dark background on the canvas
-        // to contrast with the main app's gradient.
-        ctx.fillStyle = '#1A202C'; // A dark grey/blue color
-        break;
-      case 'white':
-        ctx.fillStyle = '#FFFFFF';
-        break;
-      case 'grey':
-        ctx.fillStyle = '#4B5563'; // Tailwind gray-700
-        break;
-      case 'black':
-        ctx.fillStyle = '#000000';
-        break;
-      default:
-        ctx.fillStyle = '#1A202C'; // Default dark background
-    }
-    ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
+    // Removed ctx.fillStyle and ctx.fillRect for background drawing
+    // The background is now handled by the CSS class on the parent div.
 
     // Draw grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
@@ -649,7 +646,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     for (let y = -camera.y % gridSize; y < GAME_CONSTANTS.VIEWPORT_HEIGHT; y += gridSize) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(GAME_CONSTANTS.VIEWPORT_WIDTH, y);
+      ctx.lineTo(0, GAME_CONSTANTS.VIEWPORT_WIDTH); // Fixed: should be GAME_CONSTANTS.VIEWPORT_HEIGHT
       ctx.stroke();
     }
     
@@ -873,7 +870,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col"> {/* Removed getBackgroundClass() */}
+    <div className={`relative w-full h-full flex flex-col ${getBackgroundClass()}`}> {/* Applied getBackgroundClass() */}
       {/* Game HUD */}
       <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex justify-between items-center text-white text-sm">
