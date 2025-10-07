@@ -346,10 +346,11 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     currentBots = currentBots.map(bot => {
       // Only update AI if enough time has passed or if it's a new bot
       if (!bot.lastAIUpdateTime || now - bot.lastAIUpdateTime > botAIUpdateInterval) {
-        const otherBotsForAI = getNearbyBlobs(bot.x, bot.y, spatialGrid)
-          .filter(b => (b as BotBlob).isBot && b.id !== bot.id) as BotBlob[];
-        const nearbyFoodsForAI = getNearbyBlobs(bot.x, bot.y, spatialGrid)
-          .filter(f => !(f as BotBlob).isBot && !(f as PlayerBlob).isPlayer) as FoodBlob[];
+        const otherBlobsForAI = getNearbyBlobs(bot.x, bot.y, spatialGrid)
+          .filter(b => b.id !== bot.id); // All other blobs for AI consideration
+
+        const otherBotsForAI = otherBlobsForAI.filter(b => (b as BotBlob).isBot) as BotBlob[];
+        const nearbyFoodsForAI = otherBlobsForAI.filter(f => !(f as BotBlob).isBot && !(f as PlayerBlob).isPlayer) as FoodBlob[];
 
         const action = calculateBotAction(
           bot, 
@@ -556,9 +557,11 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     if (!ctx) return;
     
     // Clear canvas
-    // Use clientWidth/clientHeight for clearing, as ctx is already scaled
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
     
+    // Save context state before drawing grid and other elements
+    ctx.save();
+
     // Draw grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
@@ -583,17 +586,18 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       const centerX = GAME_CONSTANTS.CANVAS_WIDTH / 2 - camera.x;
       const centerY = GAME_CONSTANTS.CANVAS_HEIGHT / 2 - camera.y;
       
-      // Draw danger zone (outside safe area)
+      // Draw danger zone (outside safe area) by drawing rectangles around the circle
       ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
-      ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
       
-      // Draw safe zone
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, playAreaRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
-      
+      // Top rectangle
+      ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, Math.max(0, centerY - playAreaRadius));
+      // Bottom rectangle
+      ctx.fillRect(0, Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius), GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT - Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius));
+      // Left rectangle (between top and bottom)
+      ctx.fillRect(0, Math.max(0, centerY - playAreaRadius), Math.max(0, centerX - playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
+      // Right rectangle (between top and bottom)
+      ctx.fillRect(Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.max(0, centerY - playAreaRadius), GAME_CONSTANTS.VIEWPORT_WIDTH - Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
+
       // Draw safe zone border
       ctx.strokeStyle = '#00FF00';
       ctx.lineWidth = 3;
@@ -605,23 +609,20 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     }
 
     // Draw foods
+    ctx.shadowBlur = 1; // Reduced from 3
     foods.forEach(food => {
       const screenX = food.x - camera.x;
       const screenY = food.y - camera.y;
       
       if (isInViewport(food.x, food.y, camera.x, camera.y, 20)) {
         ctx.fillStyle = food.color;
+        ctx.shadowColor = food.color;
         ctx.beginPath();
         ctx.arc(screenX, screenY, food.size / 2, 0, Math.PI * 2); // Divide size by 2 for radius
         ctx.fill();
-        
-        // Add subtle glow (reduced blur for performance)
-        ctx.shadowColor = food.color;
-        ctx.shadowBlur = 1; // Reduced from 3
-        ctx.fill();
-        ctx.shadowBlur = 0;
       }
     });
+    ctx.shadowBlur = 0; // Reset shadow after drawing foods
     
     // Draw bots
     bots.forEach(bot => {
@@ -718,6 +719,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.fillText(evolutionStage.toUpperCase(), playerScreenX, playerScreenY - playerSize / 2 - 8);
     }
     
+    // Restore context state
+    ctx.restore();
+
     // Draw leaderboard
     drawLeaderboard(ctx);
     
@@ -731,6 +735,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const playerBlob = { ...player, size: playerSize };
     const allBlobs = [playerBlob, ...bots].sort((a, b) => b.size - a.size).slice(0, 5);
     
+    ctx.save(); // Save context for leaderboard
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(10, 10, 140, 110);
     
@@ -739,17 +744,19 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     ctx.textAlign = 'left';
     ctx.fillText('Leaderboard', 15, 28);
     
+    ctx.font = '10px Arial'; // Set font once for list items
     allBlobs.forEach((blob, index) => {
       const y = 45 + index * 13;
-      ctx.font = '10px Arial';
       ctx.fillStyle = blob.isPlayer ? '#3B82F6' : '#888';
       const name = blob.name || 'Bot';
       const size = Math.round(blob.size);
       ctx.fillText(`${index + 1}. ${name} (${size})`, 15, y);
     });
+    ctx.restore(); // Restore context after drawing leaderboard
   };
 
   const drawPowerUpsIndicator = (ctx: CanvasRenderingContext2D) => {
+    ctx.save(); // Save context for power-ups indicator
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(GAME_CONSTANTS.VIEWPORT_WIDTH - 120, 10, 110, 30 + activePowerUps.length * 15);
     
@@ -758,13 +765,14 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     ctx.textAlign = 'left';
     ctx.fillText('Active Power-ups', GAME_CONSTANTS.VIEWPORT_WIDTH - 115, 25);
     
+    ctx.fillStyle = '#FFFFFF'; // Set font color once for list items
+    ctx.font = '9px Arial'; // Set font once for list items
     activePowerUps.forEach((powerUp, index) => {
       const y = 40 + index * 15;
       const timeLeft = Math.ceil((powerUp.expiresAt - Date.now()) / 1000);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '9px Arial';
       ctx.fillText(`${powerUp.name}: ${timeLeft}s`, GAME_CONSTANTS.VIEWPORT_WIDTH - 115, y);
     });
+    ctx.restore(); // Restore context after drawing power-ups indicator
   };
 
   const handleTouch = (e: React.TouchEvent) => {
