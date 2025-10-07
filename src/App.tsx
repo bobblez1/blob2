@@ -4,11 +4,11 @@ import Dashboard from './components/Dashboard';
 import Store from './components/Store';
 import Settings from './components/Settings';
 import HomeScreen from './components/HomeScreen';
-import { GameProvider } from './context/GameContext';
+import { GameProvider } from './context/GameContext'; // Removed useGame import
 
 export type Screen = 'home' | 'game' | 'dashboard' | 'store' | 'settings';
 
-function App() {
+function App() { // Reverted AppContent back to App
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
 
   const renderScreen = () => {
