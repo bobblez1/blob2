@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { Star, Zap, FileX2 as X2, Skull, RotateCcw, ShoppingCart, Coins, ArrowLeft, CheckCircle, Shield, Heart, Palette } from 'lucide-react';
+import { Button } from './ui/button'; // Import Button
 
 interface LootReward {
   type: 'points' | 'stars' | 'powerup' | 'cosmetic';
@@ -110,12 +111,14 @@ function Store({ onBack }: StoreProps) {
       {/* Header */}
       <div className="bg-gray-900/90 backdrop-blur-sm border-b border-gray-700/50 p-4">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onBack}
             className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
           >
             <ArrowLeft size={20} />
-          </button>
+          </Button>
           <h1 className="text-xl font-bold">Store</h1>
         </div>
       </div>
@@ -146,8 +149,9 @@ function Store({ onBack }: StoreProps) {
           {/* Category Tabs */}
           <div className="flex gap-1 bg-gray-800/30 p-1 rounded-lg">
             {categories.map(category => (
-              <button
+              <Button
                 key={category.id}
+                variant={selectedCategory === category.id ? 'default' : 'ghost'}
                 onClick={() => setSelectedCategory(category.id as any)}
                 className={`flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-md text-xs font-medium transition-colors ${
                   selectedCategory === category.id
@@ -157,7 +161,7 @@ function Store({ onBack }: StoreProps) {
               >
                 {category.icon}
                 <span>{category.name}</span>
-              </button>
+              </Button>
             ))}
           </div>
 
@@ -200,7 +204,7 @@ function Store({ onBack }: StoreProps) {
                           OWNED
                         </div>
                       ) : (
-                        <button
+                        <Button
                           onClick={() => handlePurchase(upgrade.id)}
                           disabled={stats.totalPoints < upgrade.price}
                           className={`px-4 py-1 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 text-sm ${getButtonColor(upgrade.type)} ${
@@ -210,7 +214,7 @@ function Store({ onBack }: StoreProps) {
                           {purchaseAnimation === upgrade.id ? 'Purchased!' : 
                            upgrade.category === 'powerup' ? 'Activate' :
                            upgrade.category === 'utility' ? 'Use' : 'Purchase'}
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -269,7 +273,7 @@ function Store({ onBack }: StoreProps) {
                               OWNED
                             </div>
                           ) : (
-                            <button
+                            <Button
                               onClick={handleDailyDealPurchase}
                               disabled={stats.totalPoints < discountedPrice}
                               className={`px-4 py-1 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 text-sm bg-orange-500 hover:bg-orange-600 ${
@@ -277,7 +281,7 @@ function Store({ onBack }: StoreProps) {
                               }`}
                             >
                               {purchaseAnimation === dailyDeal.upgradeId ? 'Purchased!' : 'Buy Deal'}
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -323,13 +327,13 @@ function Store({ onBack }: StoreProps) {
                         <span className="font-semibold text-sm text-blue-200">5 Telegram Stars</span>
                       </div>
                       
-                      <button
+                      <Button
                         onClick={() => handleLootBoxPurchase('mystery_crate')}
                         disabled={telegramStars < 5}
                         className="px-4 py-1 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 text-sm bg-blue-500 hover:bg-blue-600 text-white"
                       >
                         Open Crate
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -352,13 +356,13 @@ function Store({ onBack }: StoreProps) {
                         <span className="font-semibold text-sm text-purple-200">15 Telegram Stars</span>
                       </div>
                       
-                      <button
+                      <Button
                         onClick={() => handleLootBoxPurchase('premium_crate')}
                         disabled={telegramStars < 15}
                         className="px-4 py-1 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 text-sm bg-purple-500 hover:bg-purple-600 text-white"
                       >
                         Open Crate
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -428,12 +432,12 @@ function Store({ onBack }: StoreProps) {
               ))}
             </div>
             
-            <button
+            <Button
               onClick={() => setShowLootModal(false)}
               className="w-full bg-blue-500 hover:bg-blue-600 py-3 rounded-lg font-semibold transition-colors"
             >
               Awesome!
-            </button>
+            </Button>
           </div>
         </div>
       )}

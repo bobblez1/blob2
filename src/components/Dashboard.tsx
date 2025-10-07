@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { Trophy, Star, Heart, TrendingUp, Gamepad2, Target, ArrowLeft, Award, Calendar, Zap, Gift, CheckCircle } from 'lucide-react';
+import { Button } from './ui/button'; // Import Button
 
 interface DashboardProps {
   onBack: () => void;
@@ -30,12 +31,14 @@ function Dashboard({ onBack }: DashboardProps) {
       {/* Header */}
       <div className="bg-gray-900/90 backdrop-blur-sm border-b border-gray-700/50 p-4">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onBack}
             className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
           >
             <ArrowLeft size={20} />
-          </button>
+          </Button>
           <h1 className="text-xl font-bold">Dashboard</h1>
         </div>
         
@@ -46,8 +49,9 @@ function Dashboard({ onBack }: DashboardProps) {
             { id: 'achievements', name: 'Achievements', icon: <Award size={14} /> },
             { id: 'challenges', name: 'Challenges', icon: <Target size={14} /> },
           ].map(tab => (
-            <button
+            <Button
               key={tab.id}
+              variant={selectedTab === tab.id ? 'default' : 'ghost'}
               onClick={() => setSelectedTab(tab.id as any)}
               className={`flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-md text-xs font-medium transition-colors ${
                 selectedTab === tab.id 
@@ -57,7 +61,7 @@ function Dashboard({ onBack }: DashboardProps) {
             >
               {tab.icon}
               <span>{tab.name}</span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>

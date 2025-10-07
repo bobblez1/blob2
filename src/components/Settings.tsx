@@ -17,6 +17,7 @@ import {
   Palette,
   Paintbrush
 } from 'lucide-react';
+import { Button } from './ui/button'; // Import Button
 
 interface SettingsProps {
   onBack: () => void;
@@ -45,12 +46,14 @@ function Settings({ onBack }: SettingsProps) {
       {/* Header */}
       <div className="bg-gray-900/90 backdrop-blur-sm border-b border-gray-700/50 p-4">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onBack}
             className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
           >
             <ArrowLeft size={20} />
-          </button>
+          </Button>
           <h1 className="text-xl font-bold">Settings</h1>
         </div>
       </div>
@@ -101,16 +104,18 @@ function Settings({ onBack }: SettingsProps) {
                 {settings.soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
                 <span>Sound Effects</span>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => updateSettings({ soundEnabled: !settings.soundEnabled })}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   settings.soundEnabled ? 'bg-green-500' : 'bg-gray-600'
-                }`}
+                } p-0`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
                   settings.soundEnabled ? 'translate-x-6' : 'translate-x-1'
                 }`} />
-              </button>
+              </Button>
             </div>
             
             <div className="flex justify-between items-center">
@@ -118,16 +123,18 @@ function Settings({ onBack }: SettingsProps) {
                 <Vibrate size={20} />
                 <span>Haptic Feedback</span>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => updateSettings({ vibrateEnabled: !settings.vibrateEnabled })}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   settings.vibrateEnabled ? 'bg-green-500' : 'bg-gray-600'
-                }`}
+                } p-0`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
                   settings.vibrateEnabled ? 'translate-x-6' : 'translate-x-1'
                 }`} />
-              </button>
+              </Button>
             </div>
             
             {/* Food Color Settings */}
@@ -140,7 +147,8 @@ function Settings({ onBack }: SettingsProps) {
               <div className="flex justify-between items-center">
                 <span className="text-gray-300">Food Colors</span>
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant={settings.foodColorMode === 'fixed' ? 'default' : 'ghost'}
                     onClick={() => updateSettings({ foodColorMode: 'fixed' })}
                     className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                       settings.foodColorMode === 'fixed'
@@ -149,8 +157,9 @@ function Settings({ onBack }: SettingsProps) {
                     }`}
                   >
                     Fixed
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant={settings.foodColorMode === 'random' ? 'default' : 'ghost'}
                     onClick={() => updateSettings({ foodColorMode: 'random' })}
                     className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                       settings.foodColorMode === 'random'
@@ -159,7 +168,7 @@ function Settings({ onBack }: SettingsProps) {
                     }`}
                   >
                     Random
-                  </button>
+                  </Button>
                 </div>
               </div>
               
@@ -168,10 +177,12 @@ function Settings({ onBack }: SettingsProps) {
                   <span className="text-sm text-gray-400">Select Food Color:</span>
                   <div className="grid grid-cols-4 gap-2">
                     {Object.entries(FOOD_COLORS).map(([name, color]) => (
-                      <button
+                      <Button
                         key={name}
+                        variant="ghost"
+                        size="sm"
                         onClick={() => updateSettings({ selectedFoodColor: color })}
-                        className={`w-12 h-8 rounded-lg border-2 transition-all ${
+                        className={`w-12 h-8 rounded-lg border-2 transition-all p-0 ${
                           settings.selectedFoodColor === color
                             ? 'border-white scale-110'
                             : 'border-gray-600 hover:border-gray-400'
@@ -201,8 +212,9 @@ function Settings({ onBack }: SettingsProps) {
                     { id: 'grey', name: 'Grey', color: 'bg-gray-700' },
                     { id: 'black', name: 'Black', color: 'bg-black' },
                   ].map(bgOption => (
-                    <button
+                    <Button
                       key={bgOption.id}
+                      variant={settings.selectedBackgroundColor === bgOption.id ? 'default' : 'ghost'}
                       onClick={() => updateSettings({ selectedBackgroundColor: bgOption.id as any })}
                       className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                         settings.selectedBackgroundColor === bgOption.id
@@ -211,7 +223,7 @@ function Settings({ onBack }: SettingsProps) {
                       }`}
                     >
                       {bgOption.name}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -226,7 +238,8 @@ function Settings({ onBack }: SettingsProps) {
             </h4>
             
             <div className="space-y-2">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setSelectedCosmetic(null)}
                 className={`w-full p-2 rounded-lg border text-left transition-colors ${
                   selectedCosmetic === null
@@ -235,13 +248,14 @@ function Settings({ onBack }: SettingsProps) {
                 }`}
               >
                 Default Blue Blob
-              </button>
+              </Button>
               
               {upgrades
                 .filter(u => u.category === 'cosmetic' && u.owned)
                 .map(cosmetic => (
-                  <button
+                  <Button
                     key={cosmetic.id}
+                    variant="ghost"
                     onClick={() => setSelectedCosmetic(cosmetic.id)}
                     className={`w-full p-2 rounded-lg border text-left transition-colors ${
                       selectedCosmetic === cosmetic.id
@@ -256,7 +270,7 @@ function Settings({ onBack }: SettingsProps) {
                       />
                       {cosmetic.name}
                     </div>
-                  </button>
+                  </Button>
                 ))}
             </div>
           </div>
@@ -330,7 +344,7 @@ function Settings({ onBack }: SettingsProps) {
               </p>
             </div>
             
-            <button
+            <Button
               onClick={handleResetData}
               className={`w-full p-3 rounded-lg font-semibold transition-all duration-200 ${
                 showResetConfirm 
@@ -344,7 +358,7 @@ function Settings({ onBack }: SettingsProps) {
                   {showResetConfirm ? 'Confirm Reset All Data' : 'Reset All Game Data'}
                 </span>
               </div>
-            </button>
+            </Button>
             
             {showResetConfirm && (
               <p className="text-xs text-red-300 text-center">
