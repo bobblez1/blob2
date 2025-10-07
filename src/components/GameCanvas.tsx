@@ -588,21 +588,18 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    const { scale, offsetX, offsetY, dpr } = renderParamsRef.current;
+    const { scale, offsetX, offsetY } = renderParamsRef.current;
 
-    // Clear the entire physical canvas
+    // Clear the entire physical canvas, making it transparent.
+    // This allows the CSS background of the parent div to show through.
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Fill background with black bars (in logical pixels)
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
     
     ctx.save();
     // Translate and scale to draw game content within the logical viewport
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
-    // Draw game background based on settings
+    // Draw game background based on settings, only for solid colors
     if (settings.selectedBackgroundColor === 'white') {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
@@ -613,7 +610,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
     }
-    // If 'gradient', the CSS background of the parent div will show through
+    // If 'gradient', no fill is applied here, letting the CSS background of the parent div show.
 
     // Draw grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
@@ -869,7 +866,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   };
 
   return (
-    <div className={`relative w-full h-full flex flex-col ${getBackgroundClass()}`}> {/* Moved gradient class here */}
+    <div className={`relative w-full h-full flex flex-col ${getBackgroundClass()}`}>
       {/* Game HUD */}
       <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex justify-between items-center text-white text-sm">
@@ -928,7 +925,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       {/* Game Canvas */}
       <canvas
         ref={canvasRef}
-        className="w-full h-full cursor-crosshair" // Removed background class from canvas
+        className="w-full h-full cursor-crosshair"
         onTouchStart={handleTouch}
         onTouchMove={handleTouch}
         style={{ touchAction: 'none' }}
