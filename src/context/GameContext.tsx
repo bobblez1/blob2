@@ -4,6 +4,7 @@ import { UPGRADE_IDS, CHALLENGE_TYPES } from '../constants/gameConstants';
 import { GameSettings } from '../types/gameTypes';
 import { FOOD_COLORS } from '../constants/gameConstants';
 import { showSuccess } from '../utils/toast'; // Import showSuccess
+import { generateUniqueId } from '../utils/gameUtils'; // Import generateUniqueId
 
 interface GameStats {
   totalPoints: number;
@@ -13,6 +14,7 @@ interface GameStats {
   lastLifeReset: string;
   lastLoginDate: string;
   loginStreak: number;
+  playerId: string; // Added playerId
 }
 
 interface Upgrade {
@@ -103,6 +105,7 @@ const INITIAL_STATS: GameStats = {
   lastLifeReset: new Date().toDateString(),
   lastLoginDate: new Date().toDateString(),
   loginStreak: 1,
+  playerId: generateUniqueId(), // Initialize with a unique ID
 };
 
 const INITIAL_SETTINGS: GameSettings = {
