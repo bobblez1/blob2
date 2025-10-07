@@ -6,17 +6,7 @@ import { FOOD_COLORS } from '../constants/gameConstants';
 import { showSuccess } from '../utils/toast'; // Import showSuccess
 import { generateUniqueId } from '../utils/gameUtils'; // Import generateUniqueId
 import { useGameSettings } from '../hooks/useGameSettings'; // Import the new hook
-
-interface GameStats {
-  totalPoints: number;
-  gamesPlayed: number;
-  highScore: number;
-  livesRemaining: number;
-  lastLifeReset: string;
-  lastLoginDate: string;
-  loginStreak: number;
-  playerId: string; // Added playerId
-}
+import { useGameStats } from '../hooks/useGameStats'; // Import the new useGameStats hook
 
 interface Upgrade {
   id: string;
@@ -61,11 +51,11 @@ interface LootReward {
 }
 
 interface GameContextType {
-  stats: GameStats;
+  stats: ReturnType<typeof useGameStats>['stats']; // Use stats from useGameStats
   upgrades: Upgrade[];
   challenges: Challenge[];
   activePowerUps: ActivePowerUp[];
-  settings: GameSettings; // Now from useGameSettings
+  settings: GameSettings;
   dailyDeal: DailyDeal | null;
   selectedCosmetic: string | null;
   currentPoints: number;
@@ -74,40 +64,29 @@ interface GameContextType {
   gameMode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team';
   selectedTeam: 'red' | 'blue';
   telegramStars: number;
-  updateStats: (points: number) => void;
+  updateStats: ReturnType<typeof useGameStats>['updateStats']; // Use updateStats from useGameStats
   growPlayer: (amount: number) => void;
   purchaseUpgrade: (upgradeId: string, priceOverride?: number) => void;
   purchaseWithStars: (upgradeId: string) => void;
   openLootBox: (boxType: string) => LootReward[];
   startGame: (mode?: 'classic' | 'timeAttack' | 'battleRoyale' | 'team') => void;
   endGame: (finalScore: number) => void;
-  useLife: () => boolean;
+  useLife: ReturnType<typeof useGameStats>['useLife']; // Use useLife from useGameStats
   revivePlayer: () => void;
   resetAllData: () => void;
   updateChallengeProgress: (challengeType: string, value: number) => void;
   claimChallengeReward: (challengeId: string) => void;
   activatePowerUp: (powerUpId: string) => void;
-  refillLives: () => void;
+  refillLives: ReturnType<typeof useGameStats>['refillLives']; // Use refillLives from useGameStats
   setGameMode: (mode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team') => void;
   setSelectedTeam: (team: 'red' | 'blue') => void;
   setSelectedCosmetic: (cosmeticId: string | null) => void;
-  updateSettings: (settings: Partial<GameSettings>) => void; // Now from useGameSettings
-  getSpeedBoostMultiplier: () => number; // New
-  getPointMultiplier: () => number;      // New
+  updateSettings: (settings: Partial<GameSettings>) => void;
+  getSpeedBoostMultiplier: () => number;
+  getPointMultiplier: () => number;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
-
-const INITIAL_STATS: GameStats = {
-  totalPoints: 0,
-  gamesPlayed: 0,
-  highScore: 0,
-  livesRemaining: 10,
-  lastLifeReset: new Date().toDateString(),
-  lastLoginDate: new Date().toDateString(),
-  loginStreak: 1,
-  playerId: generateUniqueId(), // Initialize with a unique ID
-};
 
 const INITIAL_UPGRADES: Upgrade[] = [
   // Permanent Upgrades - Speed Boost
@@ -274,7 +253,7 @@ const INITIAL_CHALLENGES: Challenge[] = [
     currentValue: 0,
     completed: false,
     reward: 100,
-    type: CHALLENGE_TYPES.EAT_BLOBS,
+    type: CHALLENGE.EAT_BLOBS,
   },
   {
     id: 'survive_5_minutes',
@@ -299,25 +278,22 @@ const INITIAL_CHALLENGES: Challenge[] = [
 ];
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const [stats, setStats] = useLocalStorage<GameStats>('agarGameStats', INITIAL_STATS);
+  const { stats, currentPoints, setCurrentPoints, updateStats, finalizeGameStats, useLife, refillLives, resetStats } = useGameStats();
   const [upgrades, setUpgrades] = useLocalStorage<Upgrade[]>('agarGameUpgrades', INITIAL_UPGRADES);
   const [challenges, setChallenges] = useLocalStorage<Challenge[]>('agarGameChallenges', INITIAL_CHALLENGES);
-  const { settings, updateSettings } = useGameSettings(); // Use the new hook
+  const { settings, updateSettings } = useGameSettings();
   const [dailyDeal, setDailyDeal] = useLocalStorage<DailyDeal | null>('agarDailyDeal', null);
   const [activePowerUps, setActivePowerUps] = useState<ActivePowerUp[]>([]);
   const [selectedCosmetic, setSelectedCosmetic] = useLocalStorage<string | null>('agarSelectedCosmetic', null);
   const [telegramStars, setTelegramStars] = useLocalStorage<number>('agarTelegramStars', 0);
-  const [currentPoints, setCurrentPoints] = useState(0);
   const [gameActive, setGameActive] = useState(false);
   const [playerSize, setPlayerSize] = useState(20);
   const [gameMode, setGameMode] = useState<'classic' | 'timeAttack' | 'battleRoyale' | 'team'>('classic');
   const [selectedTeam, setSelectedTeam] = useState<'red' | 'blue'>('red');
 
-  // Handle daily resets and login streaks
+  // Generate daily deal if none exists or if it's a new day
   useEffect(() => {
     const today = new Date().toDateString();
-    
-    // Generate daily deal if none exists or if it's a new day
     if (!dailyDeal || new Date(dailyDeal.expiresAt).toDateString() !== today) {
       const availableUpgrades = upgrades.filter(u => u.price > 50); // Only discount expensive items
       if (availableUpgrades.length > 0) {
@@ -331,41 +307,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
-    
-    // Check if we need to reset daily lives
-    if (stats.lastLifeReset !== today) {
-      const updatedStats = {
-        ...stats,
-        livesRemaining: 10,
-        lastLifeReset: today,
-      };
-      
-      // Check login streak
-      if (stats.lastLoginDate !== today) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        
-        if (stats.lastLoginDate === yesterday.toDateString()) {
-          // Consecutive day - increment streak
-          updatedStats.loginStreak += 1;
-        } else {
-          // Streak broken - reset to 1
-          updatedStats.loginStreak = 1;
-        }
-        
-        updatedStats.lastLoginDate = today;
-        
-        // Apply streak rewards
-        const streakBonus = Math.min(updatedStats.loginStreak * 5, 50);
-        updatedStats.totalPoints += streakBonus;
-        if (streakBonus > 0) {
-          showSuccess(`Login Streak! +${streakBonus} points!`);
-        }
-      }
-      
-      setStats(updatedStats);
-    }
-  }, [stats, setStats, dailyDeal, setDailyDeal, upgrades]);
+  }, [dailyDeal, setDailyDeal, upgrades]);
 
   // Clean up expired power-ups
   useEffect(() => {
@@ -376,10 +318,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearInterval(interval);
   }, []);
-
-  const updateStats = (points: number) => {
-    setCurrentPoints(prev => prev + points);
-  };
   
   const growPlayer = (amount: number) => {
     setPlayerSize(prev => Math.max(5, prev + amount));
@@ -408,6 +346,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
+    // Deduct points from stats managed by useGameStats
     setStats(prev => ({
       ...prev,
       totalPoints: prev.totalPoints - finalPrice,
@@ -531,17 +470,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     showSuccess(`${upgrade.name} activated!`);
   };
 
-  const refillLives = () => {
-    setStats(prev => ({
-      ...prev,
-      livesRemaining: 10,
-    }));
-  };
-
   const startGame = () => {
     console.log('Starting game with mode:', gameMode);
     setGameActive(true);
-    setCurrentPoints(0);
+    setCurrentPoints(0); // Reset current game points
     setPlayerSize(20);
     console.log('Game started - gameActive:', true, 'playerSize:', 20);
   };
@@ -550,29 +482,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setGameActive(false);
     
     // Calculate multipliers
-    const permanentPointMultiplier = getPointMultiplier(); // Use new helper
+    const permanentPointMultiplier = getPointMultiplier();
     const powerUpMultiplier = activePowerUps.find(p => p.id === UPGRADE_IDS.DOUBLE_POINTS) ? 2 : 1;
-    const totalScore = finalScore * permanentPointMultiplier * powerUpMultiplier;
     
-    setStats(prev => ({
-      ...prev,
-      totalPoints: prev.totalPoints + totalScore,
-      gamesPlayed: prev.gamesPlayed + 1,
-      highScore: Math.max(prev.highScore, totalScore),
-    }));
+    finalizeGameStats(finalScore, permanentPointMultiplier, powerUpMultiplier);
 
     // Update daily games challenge
     updateChallengeProgress(CHALLENGE_TYPES.DAILY_GAMES, 1);
-  };
-
-  const useLife = (): boolean => {
-    if (stats.livesRemaining <= 0) return false;
-    
-    setStats(prev => ({
-      ...prev,
-      livesRemaining: prev.livesRemaining - 1,
-    }));
-    return true;
   };
 
   const revivePlayer = () => {
@@ -589,7 +505,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           
           if (completed && !challenge.completed) {
             // Auto-claim reward
-            setStats(prevStats => ({
+            setStats(prevStats => ({ // Update stats via useGameStats's setStats
               ...prevStats,
               totalPoints: prevStats.totalPoints + challenge.reward,
             }));
@@ -611,31 +527,31 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const challenge = challenges.find(c => c.id === challengeId);
     if (!challenge || !challenge.completed) return;
 
-    setStats(prev => ({
+    setStats(prev => ({ // Update stats via useGameStats's setStats
       ...prev,
       totalPoints: prev.totalPoints + challenge.reward,
     }));
   };
 
   const resetAllData = () => {
-    setStats(INITIAL_STATS);
+    resetStats(); // Reset stats via useGameStats
     setUpgrades(INITIAL_UPGRADES);
     setChallenges(INITIAL_CHALLENGES);
-    // settings are reset by useGameSettings internally
+    updateSettings({}); // Reset settings via useGameSettings
     setActivePowerUps([]);
     setTelegramStars(0);
     setDailyDeal(null);
     showSuccess('All game data reset!');
   };
 
-  // New helper function to get the highest active speed boost multiplier
+  // Helper function to get the highest active speed boost multiplier
   const getSpeedBoostMultiplier = useCallback(() => {
     const speedUpgrades = upgrades.filter(u => u.type === 'speed' && u.owned && u.effectValue !== undefined);
     if (speedUpgrades.length === 0) return 0; // No speed boost
     return Math.max(...speedUpgrades.map(u => u.effectValue!));
   }, [upgrades]);
 
-  // New helper function to get the highest active point multiplier
+  // Helper function to get the highest active point multiplier
   const getPointMultiplier = useCallback(() => {
     const multiplierUpgrades = upgrades.filter(u => u.type === 'multiplier' && u.owned && u.effectValue !== undefined);
     if (multiplierUpgrades.length === 0) return 1; // Default 1x multiplier
@@ -648,7 +564,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       upgrades,
       challenges,
       activePowerUps,
-      settings, // Provided by useGameSettings
+      settings,
       dailyDeal,
       selectedCosmetic,
       currentPoints,
@@ -674,7 +590,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setSelectedTeam,
       setSelectedCosmetic,
       growPlayer,
-      updateSettings, // Provided by useGameSettings
+      updateSettings,
       getSpeedBoostMultiplier,
       getPointMultiplier,
     }}>
