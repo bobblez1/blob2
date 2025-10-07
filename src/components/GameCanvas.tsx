@@ -610,28 +610,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     }
   }, [settings.selectedBackgroundColor]);
 
-  const draw = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const { scale, offsetX, offsetY } = renderParamsRef.current;
-
-    // Clear the entire physical canvas, making it transparent.
-    // This allows the CSS background of the parent div to show through.
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.save();
-    // Translate and scale to draw game content within the logical viewport
-    ctx.translate(offsetX, offsetY);
-    ctx.scale(scale, scale);
-
-    // Removed ctx.fillStyle and ctx.fillRect for background drawing
-    // The background is now handled by the CSS class on the parent div.
-
-    // Draw grid
+  // Helper drawing functions
+  const drawGrid = (ctx: CanvasRenderingContext2D) => {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
     const gridSize = GAME_CONSTANTS.GRID_SIZE;
@@ -646,11 +626,12 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     for (let y = -camera.y % gridSize; y < GAME_CONSTANTS.VIEWPORT_HEIGHT; y += gridSize) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(0, GAME_CONSTANTS.VIEWPORT_WIDTH); // Fixed: should be GAME_CONSTANTS.VIEWPORT_HEIGHT
+      ctx.lineTo(GAME_CONSTANTS.VIEWPORT_WIDTH, y); // Corrected line to draw horizontally across viewport width
       ctx.stroke();
     }
-    
-    // Draw Battle Royale safe zone
+  };
+
+  const drawBattleRoyaleSafeZone = (ctx: CanvasRenderingContext2D) => {
     if (gameMode === 'battleRoyale') {
       const centerX = GAME_CONSTANTS.CANVAS_WIDTH / 2 - camera.x;
       const centerY = GAME_CONSTANTS.CANVAS_HEIGHT / 2 - camera.y;
@@ -676,9 +657,10 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.stroke();
       ctx.setLineDash([]);
     }
+  };
 
-    // Draw foods
-    ctx.shadowBlur = 1; // Reduced from 3
+  const drawFoods = (ctx: CanvasRenderingContext2D) => {
+    ctx.shadowBlur = 1;
     foods.forEach(food => {
       const screenX = food.x - camera.x;
       const screenY = food.y - camera.y;
@@ -687,36 +669,31 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         ctx.fillStyle = food.color;
         ctx.shadowColor = food.color;
         ctx.beginPath();
-        ctx.arc(screenX, screenY, food.size / 2, 0, Math.PI * 2); // Divide size by 2 for radius
+        ctx.arc(screenX, screenY, food.size / 2, 0, Math.PI * 2);
         ctx.fill();
       }
     });
-    ctx.shadowBlur = 0; // Reset shadow after drawing foods
-    
-    // Draw bots
+    ctx.shadowBlur = 0;
+  };
+
+  const drawBots = (ctx: CanvasRenderingContext2D) => {
     bots.forEach(bot => {
       const screenX = bot.x - camera.x;
       const screenY = bot.y - camera.y;
       
       if (isInViewport(bot.x, bot.y, camera.x, camera.y, 100)) {
-        // Draw bot
         ctx.fillStyle = bot.color;
         ctx.beginPath();
         ctx.arc(screenX, screenY, bot.size / 2, 0, Math.PI * 2);
         ctx.fill();
         
-        // Draw bot outline
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        
-        // Team mode: different outline colors
         if (gameMode === 'team' && bot.team) {
-          ctx.strokeStyle = bot.team === 'red' ? '#EF4444' : '#3B82F6';
+          ctx.strokeStyle = bot.team === 'red' ? TEAM_COLORS.red : TEAM_COLORS.blue;
         }
-        
         ctx.lineWidth = 1;
         ctx.stroke();
         
-        // Draw bot name
         if (bot.size > 15) {
           ctx.fillStyle = 'white';
           ctx.font = '10px Arial';
@@ -725,16 +702,16 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         }
       }
     });
-    
-    // Draw player with evolution effects
+  };
+
+  const drawPlayer = (ctx: CanvasRenderingContext2D) => {
     const playerScreenX = player.x - camera.x;
     const playerScreenY = player.y - camera.y;
     const evolutionStage = getEvolutionStage(playerSize);
     
-    // Player glow based on evolution
-    const glowIntensity = evolutionStage === 'legendary' ? 10 : // Reduced from 20
-                         evolutionStage === 'epic' ? 7 : // Reduced from 15
-                         evolutionStage === 'rare' ? 5 : 0; // Reduced from 10
+    const glowIntensity = evolutionStage === 'legendary' ? 10 :
+                         evolutionStage === 'epic' ? 7 :
+                         evolutionStage === 'rare' ? 5 : 0;
     
     if (glowIntensity > 0) {
       ctx.shadowColor = player.color;
@@ -747,7 +724,6 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     ctx.fill();
     ctx.shadowBlur = 0;
     
-    // Draw shield effect
     if (shieldActive) {
       ctx.strokeStyle = '#60A5FA';
       ctx.lineWidth = 3;
@@ -758,10 +734,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.setLineDash([]);
     }
     
-    // Draw player outline
     ctx.strokeStyle = getEvolutionColor(evolutionStage);
-                     
-    // Team mode: team-colored outline
     if (gameMode === 'team') {
       ctx.strokeStyle = selectedTeam === 'red' ? TEAM_COLORS.red : TEAM_COLORS.blue;
     }
@@ -769,7 +742,6 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     ctx.lineWidth = evolutionStage === 'legendary' ? 4 : 2;
     ctx.stroke();
     
-    // Draw player name and evolution indicator
     ctx.fillStyle = 'white';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
@@ -779,17 +751,6 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.font = '8px Arial';
       ctx.fillStyle = getEvolutionColor(evolutionStage);
       ctx.fillText(evolutionStage.toUpperCase(), playerScreenX, playerScreenY - playerSize / 2 - 8);
-    }
-    
-    // Restore context state
-    ctx.restore();
-
-    // Draw leaderboard
-    drawLeaderboard(ctx);
-    
-    // Draw active power-ups indicator
-    if (activePowerUps.length > 0) {
-      drawPowerUpsIndicator(ctx);
     }
   };
 
@@ -835,6 +796,36 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.fillText(`${powerUp.name}: ${timeLeft}s`, GAME_CONSTANTS.VIEWPORT_WIDTH - 115, y);
     });
     ctx.restore(); // Restore context after drawing power-ups indicator
+  };
+
+  const draw = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const { scale, offsetX, offsetY } = renderParamsRef.current;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+
+    drawGrid(ctx);
+    drawBattleRoyaleSafeZone(ctx);
+    drawFoods(ctx);
+    drawBots(ctx);
+    drawPlayer(ctx);
+    
+    ctx.restore();
+
+    drawLeaderboard(ctx);
+    
+    if (activePowerUps.length > 0) {
+      drawPowerUpsIndicator(ctx);
+    }
   };
 
   const handleTouch = (e: React.TouchEvent) => {
