@@ -128,10 +128,10 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
             { id: 'battleRoyale', name: 'Battle Royale', icon: '👑', desc: 'Last blob standing' },
             { id: 'team', name: 'Team Mode', icon: '🤝', desc: 'Red vs Blue' },
           ].map(mode => (
-            <button
+            <Button
               key={mode.id}
               onClick={() => setGameMode(mode.id as any)}
-              className={`p-3 rounded-xl border transition-all duration-200 ${
+              className={`p-3 rounded-xl border transition-all duration-200 h-auto ${
                 gameMode === mode.id
                   ? 'bg-blue-500/30 border-blue-500/50 text-blue-200'
                   : 'bg-gray-800/30 border-gray-700/50 text-gray-300 hover:bg-gray-700/30'
@@ -140,7 +140,7 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
               <div className="text-lg mb-1">{mode.icon}</div>
               <div className="text-xs font-semibold">{mode.name}</div>
               <div className="text-xs opacity-75">{mode.desc}</div>
-            </button>
+            </Button>
           ))}
         </div>
         
@@ -148,26 +148,26 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
           <div className="mt-3">
             <p className="text-gray-400 text-xs mb-2">Select your team:</p>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => setSelectedTeam('red')}
-                className={`flex-1 p-2 rounded-lg border transition-all ${
+                className={`flex-1 p-2 rounded-lg border transition-all h-auto ${
                   selectedTeam === 'red'
                     ? 'bg-red-500/30 border-red-500/50 text-red-200'
                     : 'bg-gray-800/30 border-gray-700/50 text-gray-300'
                 }`}
               >
                 🔴 Red Team
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setSelectedTeam('blue')}
-                className={`flex-1 p-2 rounded-lg border transition-all ${
+                className={`flex-1 p-2 rounded-lg border transition-all h-auto ${
                   selectedTeam === 'blue'
                     ? 'bg-blue-500/30 border-blue-500/50 text-blue-200'
                     : 'bg-gray-800/30 border-gray-700/50 text-gray-300'
                 }`}
               >
                 🔵 Blue Team
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -291,35 +291,35 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
 
         {/* Secondary Buttons */}
         <div className="grid grid-cols-3 gap-3">
-          <button
+          <Button
             onClick={onStore}
-            className="bg-gradient-to-r from-orange-500/20 to-orange-600/20 border border-orange-500/30 text-white font-semibold py-3 px-4 rounded-xl backdrop-blur-sm transition-all duration-200 hover:bg-orange-500/30 active:scale-95"
+            className="bg-gradient-to-r from-orange-500/20 to-orange-600/20 border border-orange-500/30 text-white font-semibold py-3 px-4 rounded-xl backdrop-blur-sm transition-all duration-200 hover:bg-orange-500/30 active:scale-95 h-auto"
           >
             <div className="flex flex-col items-center gap-1">
               <ShoppingBag size={20} />
               <span className="text-sm">Store</span>
             </div>
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={onDashboard}
-            className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/30 text-white font-semibold py-3 px-4 rounded-xl backdrop-blur-sm transition-all duration-200 hover:bg-blue-500/30 active:scale-95"
+            className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/30 text-white font-semibold py-3 px-4 rounded-xl backdrop-blur-sm transition-all duration-200 hover:bg-blue-500/30 active:scale-95 h-auto"
           >
             <div className="flex flex-col items-center gap-1">
               <BarChart3 size={20} />
               <span className="text-sm">Stats</span>
             </div>
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={onSettings}
-            className="bg-gradient-to-r from-gray-500/20 to-gray-600/20 border border-gray-500/30 text-white font-semibold py-3 px-4 rounded-xl backdrop-blur-sm transition-all duration-200 hover:bg-gray-500/30 active:scale-95"
+            className="bg-gradient-to-r from-gray-500/20 to-gray-600/20 border border-gray-500/30 text-white font-semibold py-3 px-4 rounded-xl backdrop-blur-sm transition-all duration-200 hover:bg-gray-500/30 active:scale-95 h-auto"
           >
             <div className="flex flex-col items-center gap-1">
               <SettingsIcon size={20} />
               <span className="text-sm">Settings</span>
             </div>
-          </button>
+          </Button>
         </div>
       </div>
 
