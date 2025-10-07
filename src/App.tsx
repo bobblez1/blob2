@@ -28,7 +28,6 @@ function App() {
             onStore={() => setCurrentScreen('store')}
             onDashboard={() => setCurrentScreen('dashboard')}
             onSettings={() => setCurrentScreen('settings')}
-            backgroundClass="bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900" // Pass gradient to HomeScreen
           />
         );
     }
@@ -36,7 +35,7 @@ function App() {
 
   return (
     <GameProvider>
-      <div className="h-screen flex flex-col overflow-hidden"> {/* Removed global gradient */}
+      <div className="h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex flex-col overflow-hidden">
         {renderScreen()}
       </div>
     </GameProvider>
