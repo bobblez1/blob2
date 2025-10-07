@@ -853,7 +853,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   const getBackgroundClass = () => {
     switch (settings.selectedBackgroundColor) {
       case 'gradient':
-        return 'bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900';
+        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900'; // Corrected to match App.tsx
       case 'white':
         return 'bg-white';
       case 'grey':
@@ -861,7 +861,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       case 'black':
         return 'bg-black';
       default:
-        return 'bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900';
+        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900'; // Corrected to match App.tsx
     }
   };
 
