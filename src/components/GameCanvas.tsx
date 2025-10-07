@@ -38,7 +38,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     updateStats,
     updateChallengeProgress,
     activatePowerUp,
-    growPlayer
+    growPlayer,
+    getSpeedBoostMultiplier, // New
+    getPointMultiplier       // New
   } = useGame();
   
   const [player, setPlayer] = useState<PlayerBlob>({
@@ -213,7 +215,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor]); // Added settings.selectedBackgroundColor to dependencies
+  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier]); // Added new dependencies
 
   const generateBots = () => {
     const newBots: BotBlob[] = [];
@@ -279,9 +281,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       let targetY = mouseRef.current.y;
       
       // Calculate speed based on size (bigger = slower)
-      const baseSpeed = upgrades.find(u => u.id === UPGRADE_IDS.SPEED_BOOST && u.owned) 
-        ? GAME_CONSTANTS.PLAYER_SPEED_BOOST 
-        : GAME_CONSTANTS.PLAYER_BASE_SPEED;
+      const activeSpeedBoost = getSpeedBoostMultiplier(); // Use new helper
+      const baseSpeed = GAME_CONSTANTS.PLAYER_BASE_SPEED * (1 + activeSpeedBoost);
       const sizeSpeedFactor = Math.max(0.3, 1 - (newPlayerSize - GAME_CONSTANTS.PLAYER_MIN_SIZE) / 200);
       const speed = baseSpeed * sizeSpeedFactor;
       
@@ -477,7 +478,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
     // Check collisions with bots
     const hasInstantKill = upgrades.find(u => u.id === UPGRADE_IDS.INSTANT_KILL && u.owned);
-    const baseMultiplier = upgrades.find(u => u.id === UPGRADE_IDS.POINT_MULTIPLIER_1 && u.owned) ? 2 : 1;
+    const permanentPointMultiplier = getPointMultiplier(); // Use new helper
     const powerUpMultiplier = activePowerUps.find(p => p.id === UPGRADE_IDS.DOUBLE_POINTS) ? 2 : 1;
     
     const botsToRemoveFromPlayer = new Set<string>();
@@ -497,7 +498,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         if (canEatBot && (newPlayerSize > bot.size || hasInstantKill)) {
           // Player eats bot - gain points and growth
           const basePoints = Math.floor(bot.size / 2);
-          const totalPoints = basePoints * baseMultiplier * powerUpMultiplier;
+          const totalPoints = basePoints * permanentPointMultiplier * powerUpMultiplier;
           
           updateStats(totalPoints);
           updateChallengeProgress(CHALLENGE_TYPES.EAT_BLOBS, 1);
@@ -785,7 +786,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
   const drawLeaderboard = (ctx: CanvasRenderingContext2D) => {
     const playerBlob = { ...player, size: playerSize };
-    const allBlobs = [playerBlob, ...bots].sort((a, b) => b.size - a.size).slice(0, 5);
+    const allBlobs = [playerBlob, ...bots].sort((a, b) => b.size - a.sizenew).slice(0, 5);
     
     ctx.save(); // Save context for leaderboard
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { UPGRADE_IDS, CHALLENGE_TYPES } from '../constants/gameConstants';
 import { GameSettings } from '../types/gameTypes';
@@ -24,6 +24,7 @@ interface Upgrade {
   category?: 'cosmetic' | 'powerup' | 'utility' | 'permanent';
   color?: string;
   effectDuration?: number; // in milliseconds
+  effectValue?: number; // e.g., speed percentage (0.25 for 25%), multiplier value (2 for 2x)
 }
 
 interface Challenge {
@@ -87,6 +88,8 @@ interface GameContextType {
   setSelectedTeam: (team: 'red' | 'blue') => void;
   setSelectedCosmetic: (cosmeticId: string | null) => void;
   updateSettings: (settings: Partial<GameSettings>) => void;
+  getSpeedBoostMultiplier: () => number; // New
+  getPointMultiplier: () => number;      // New
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -110,7 +113,7 @@ const INITIAL_SETTINGS: GameSettings = {
 };
 
 const INITIAL_UPGRADES: Upgrade[] = [
-  // Permanent Upgrades
+  // Permanent Upgrades - Speed Boost
   {
     id: UPGRADE_IDS.SPEED_BOOST_1,
     name: 'Speed Boost I',
@@ -119,7 +122,29 @@ const INITIAL_UPGRADES: Upgrade[] = [
     owned: false,
     type: 'speed',
     category: 'permanent',
+    effectValue: 0.25, // 25% speed increase
   },
+  {
+    id: UPGRADE_IDS.SPEED_BOOST_2,
+    name: 'Speed Boost II',
+    description: 'Increase movement speed by 50%',
+    price: 200,
+    owned: false,
+    type: 'speed',
+    category: 'permanent',
+    effectValue: 0.50, // 50% speed increase
+  },
+  {
+    id: UPGRADE_IDS.SPEED_BOOST_3,
+    name: 'Speed Boost III',
+    description: 'Increase movement speed by 75%',
+    price: 350,
+    owned: false,
+    type: 'speed',
+    category: 'permanent',
+    effectValue: 0.75, // 75% speed increase
+  },
+  // Permanent Upgrades - Point Multiplier
   {
     id: UPGRADE_IDS.POINT_MULTIPLIER_1,
     name: '2x Point Multiplier I',
@@ -128,7 +153,29 @@ const INITIAL_UPGRADES: Upgrade[] = [
     owned: false,
     type: 'multiplier',
     category: 'permanent',
+    effectValue: 2, // 2x multiplier
   },
+  {
+    id: UPGRADE_IDS.POINT_MULTIPLIER_2,
+    name: '3x Point Multiplier II',
+    description: 'Triple points from eating blobs',
+    price: 300,
+    owned: false,
+    type: 'multiplier',
+    category: 'permanent',
+    effectValue: 3, // 3x multiplier
+  },
+  {
+    id: UPGRADE_IDS.POINT_MULTIPLIER_3,
+    name: '4x Point Multiplier III',
+    description: 'Quadruple points from eating blobs',
+    price: 500,
+    owned: false,
+    type: 'multiplier',
+    category: 'permanent',
+    effectValue: 4, // 4x multiplier
+  },
+  // Single-level Permanent Upgrades
   {
     id: UPGRADE_IDS.INSTANT_KILL,
     name: 'Instant Kill',
@@ -352,7 +399,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         refillLives();
       }
     } else {
-      // Permanent upgrades
+      // Permanent upgrades and cosmetics
       setUpgrades(prev => 
         prev.map(u => 
           u.id === upgradeId ? { ...u, owned: true } : u
@@ -500,9 +547,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setGameActive(false);
     
     // Calculate multipliers
-    const baseMultiplier = upgrades.find(u => u.id === UPGRADE_IDS.POINT_MULTIPLIER_1 && u.owned) ? 2 : 1;
+    const permanentPointMultiplier = getPointMultiplier(); // Use new helper
     const powerUpMultiplier = activePowerUps.find(p => p.id === UPGRADE_IDS.DOUBLE_POINTS) ? 2 : 1;
-    const totalScore = finalScore * baseMultiplier * powerUpMultiplier;
+    const totalScore = finalScore * permanentPointMultiplier * powerUpMultiplier;
     
     setStats(prev => ({
       ...prev,
@@ -580,6 +627,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
+  // New helper function to get the highest active speed boost multiplier
+  const getSpeedBoostMultiplier = useCallback(() => {
+    const speedUpgrades = upgrades.filter(u => u.type === 'speed' && u.owned && u.effectValue !== undefined);
+    if (speedUpgrades.length === 0) return 0; // No speed boost
+    return Math.max(...speedUpgrades.map(u => u.effectValue!));
+  }, [upgrades]);
+
+  // New helper function to get the highest active point multiplier
+  const getPointMultiplier = useCallback(() => {
+    const multiplierUpgrades = upgrades.filter(u => u.type === 'multiplier' && u.owned && u.effectValue !== undefined);
+    if (multiplierUpgrades.length === 0) return 1; // Default 1x multiplier
+    return Math.max(...multiplierUpgrades.map(u => u.effectValue!));
+  }, [upgrades]);
+
   return (
     <GameContext.Provider value={{
       stats,
@@ -613,6 +674,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setSelectedCosmetic,
       growPlayer,
       updateSettings,
+      getSpeedBoostMultiplier, // Add new function
+      getPointMultiplier,      // Add new function
     }}>
       {children}
     </GameContext.Provider>
