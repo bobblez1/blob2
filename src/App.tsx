@@ -35,7 +35,7 @@ function App() {
 
   return (
     <GameProvider>
-      <div className="h-screen flex flex-col overflow-hidden"> {/* Removed bg-gradient-to-br classes */}
+      <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900"> {/* Re-added bg-gradient-to-br classes */}
         {renderScreen()}
       </div>
     </GameProvider>
