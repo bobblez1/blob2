@@ -18,9 +18,10 @@ interface HomeScreenProps {
   onStore: () => void;
   onDashboard: () => void;
   onSettings: () => void;
+  backgroundClass?: string; // Added backgroundClass prop
 }
 
-function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProps) {
+function HomeScreen({ onPlay, onStore, onDashboard, onSettings, backgroundClass }: HomeScreenProps) {
   const { stats, upgrades, gameMode, setGameMode, selectedTeam, setSelectedTeam } = useGame();
   const [animatedPoints, setAnimatedPoints] = useState(0);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -68,7 +69,7 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col mx-auto">
+    <div className={`relative w-full h-full flex flex-col mx-auto ${backgroundClass}`}> {/* Applied backgroundClass here */}
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-10 left-10 w-20 h-20 bg-blue-500/20 rounded-full animate-pulse"></div>
