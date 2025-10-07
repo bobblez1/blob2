@@ -5,6 +5,7 @@ import { GameSettings } from '../types/gameTypes';
 import { FOOD_COLORS } from '../constants/gameConstants';
 import { showSuccess } from '../utils/toast'; // Import showSuccess
 import { generateUniqueId } from '../utils/gameUtils'; // Import generateUniqueId
+import { useGameSettings } from '../hooks/useGameSettings'; // Import the new hook
 
 interface GameStats {
   totalPoints: number;
@@ -64,7 +65,7 @@ interface GameContextType {
   upgrades: Upgrade[];
   challenges: Challenge[];
   activePowerUps: ActivePowerUp[];
-  settings: GameSettings;
+  settings: GameSettings; // Now from useGameSettings
   dailyDeal: DailyDeal | null;
   selectedCosmetic: string | null;
   currentPoints: number;
@@ -90,7 +91,7 @@ interface GameContextType {
   setGameMode: (mode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team') => void;
   setSelectedTeam: (team: 'red' | 'blue') => void;
   setSelectedCosmetic: (cosmeticId: string | null) => void;
-  updateSettings: (settings: Partial<GameSettings>) => void;
+  updateSettings: (settings: Partial<GameSettings>) => void; // Now from useGameSettings
   getSpeedBoostMultiplier: () => number; // New
   getPointMultiplier: () => number;      // New
 }
@@ -106,14 +107,6 @@ const INITIAL_STATS: GameStats = {
   lastLoginDate: new Date().toDateString(),
   loginStreak: 1,
   playerId: generateUniqueId(), // Initialize with a unique ID
-};
-
-const INITIAL_SETTINGS: GameSettings = {
-  soundEnabled: true,
-  vibrateEnabled: true,
-  foodColorMode: 'fixed',
-  selectedFoodColor: FOOD_COLORS.RED,
-  selectedBackgroundColor: 'gradient', // Default to gradient
 };
 
 const INITIAL_UPGRADES: Upgrade[] = [
@@ -309,7 +302,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useLocalStorage<GameStats>('agarGameStats', INITIAL_STATS);
   const [upgrades, setUpgrades] = useLocalStorage<Upgrade[]>('agarGameUpgrades', INITIAL_UPGRADES);
   const [challenges, setChallenges] = useLocalStorage<Challenge[]>('agarGameChallenges', INITIAL_CHALLENGES);
-  const [settings, setSettings] = useLocalStorage<GameSettings>('agarGameSettings', INITIAL_SETTINGS);
+  const { settings, updateSettings } = useGameSettings(); // Use the new hook
   const [dailyDeal, setDailyDeal] = useLocalStorage<DailyDeal | null>('agarDailyDeal', null);
   const [activePowerUps, setActivePowerUps] = useState<ActivePowerUp[]>([]);
   const [selectedCosmetic, setSelectedCosmetic] = useLocalStorage<string | null>('agarSelectedCosmetic', null);
@@ -628,16 +621,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setStats(INITIAL_STATS);
     setUpgrades(INITIAL_UPGRADES);
     setChallenges(INITIAL_CHALLENGES);
-    setSettings(INITIAL_SETTINGS);
+    // settings are reset by useGameSettings internally
     setActivePowerUps([]);
     setTelegramStars(0);
     setDailyDeal(null);
     showSuccess('All game data reset!');
-  };
-
-  const updateSettings = (newSettings: Partial<GameSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-    showSuccess('Settings updated!');
   };
 
   // New helper function to get the highest active speed boost multiplier
@@ -660,7 +648,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       upgrades,
       challenges,
       activePowerUps,
-      settings,
+      settings, // Provided by useGameSettings
       dailyDeal,
       selectedCosmetic,
       currentPoints,
@@ -686,9 +674,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setSelectedTeam,
       setSelectedCosmetic,
       growPlayer,
-      updateSettings,
-      getSpeedBoostMultiplier, // Add new function
-      getPointMultiplier,      // Add new function
+      updateSettings, // Provided by useGameSettings
+      getSpeedBoostMultiplier,
+      getPointMultiplier,
     }}>
       {children}
     </GameContext.Provider>
