@@ -613,18 +613,26 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
-    // Draw game background based on settings, only for solid colors
-    if (settings.selectedBackgroundColor === 'white') {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
-    } else if (settings.selectedBackgroundColor === 'grey') {
-      ctx.fillStyle = '#4B5563'; // Tailwind gray-700
-      ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
-    } else if (settings.selectedBackgroundColor === 'black') {
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
+    // Draw game background based on settings
+    switch (settings.selectedBackgroundColor) {
+      case 'gradient':
+        // For 'gradient' setting, draw a solid dark background on the canvas
+        // to contrast with the main app's gradient.
+        ctx.fillStyle = '#1A202C'; // A dark grey/blue color
+        break;
+      case 'white':
+        ctx.fillStyle = '#FFFFFF';
+        break;
+      case 'grey':
+        ctx.fillStyle = '#4B5563'; // Tailwind gray-700
+        break;
+      case 'black':
+        ctx.fillStyle = '#000000';
+        break;
+      default:
+        ctx.fillStyle = '#1A202C'; // Default dark background
     }
-    // If 'gradient', no fill is applied here, letting the CSS background of the parent div show.
+    ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
 
     // Draw grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
@@ -641,8 +649,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     for (let y = -camera.y % gridSize; y < GAME_CONSTANTS.VIEWPORT_HEIGHT; y += gridSize) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(0, y); // Corrected from x, y to 0, y
-      ctx.lineTo(GAME_CONSTANTS.VIEWPORT_WIDTH, y); // Corrected from x, GAME_CONSTANTS.VIEWPORT_HEIGHT to GAME_CONSTANTS.VIEWPORT_WIDTH, y
+      ctx.lineTo(GAME_CONSTANTS.VIEWPORT_WIDTH, y);
       ctx.stroke();
     }
     
@@ -661,7 +668,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       // Left rectangle (between top and bottom)
       ctx.fillRect(0, Math.max(0, centerY - playAreaRadius), Math.max(0, centerX - playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
       // Right rectangle (between top and bottom)
-      ctx.fillRect(Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.max(0, centerY + playAreaRadius), GAME_CONSTANTS.VIEWPORT_WIDTH - Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
+      ctx.fillRect(Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.max(0, centerY - playAreaRadius), GAME_CONSTANTS.VIEWPORT_WIDTH - Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
 
       // Draw safe zone border
       ctx.strokeStyle = '#00FF00';
@@ -865,23 +872,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     }));
   };
 
-  const getBackgroundClass = () => {
-    switch (settings.selectedBackgroundColor) {
-      case 'gradient':
-        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900';
-      case 'white':
-        return 'bg-white';
-      case 'grey':
-        return 'bg-gray-700';
-      case 'black':
-        return 'bg-black';
-      default:
-        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900';
-    }
-  };
-
   return (
-    <div className={`relative w-full h-full flex flex-col ${getBackgroundClass()}`}>
+    <div className="relative w-full h-full flex flex-col"> {/* Removed getBackgroundClass() */}
       {/* Game HUD */}
       <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex justify-between items-center text-white text-sm">
