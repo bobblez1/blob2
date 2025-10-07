@@ -28,6 +28,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     settings,
     gameMode,
     selectedTeam,
+    selectedCosmetic, // Added selectedCosmetic
     currentPoints, 
     playerSize,
     gameActive, 
@@ -39,8 +40,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     updateChallengeProgress,
     activatePowerUp,
     growPlayer,
-    getSpeedBoostMultiplier, // New
-    getPointMultiplier       // New
+    getSpeedBoostMultiplier,
+    getPointMultiplier       
   } = useGame();
   
   const [player, setPlayer] = useState<PlayerBlob>({
@@ -215,7 +216,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier]); // Added new dependencies
+  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic]); // Added selectedCosmetic to dependencies
 
   const generateBots = () => {
     const newBots: BotBlob[] = [];
@@ -563,14 +564,13 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   const handleRestart = () => {
     if (stats.livesRemaining > 0) {
       setGameOver(false);
-      setPlayer({
-        id: 'player',
+      setPlayer(prev => ({
+        ...prev,
         x: GAME_CONSTANTS.CANVAS_WIDTH / 2,
         y: GAME_CONSTANTS.CANVAS_HEIGHT / 2,
-        color: getPlayerColor(),
-        isPlayer: true as const,
-        name: 'You',
-      });
+        color: getPlayerColor(), // Ensure color is updated on restart
+        size: GAME_CONSTANTS.PLAYER_INITIAL_SIZE, // Reset size
+      }));
       generateBots();
       generateFoods();
       gameStartTime.current = Date.now();
@@ -578,10 +578,13 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     }
   };
 
-  const getPlayerColor = () => {
-    const cosmetic = upgrades.find(u => u.category === 'cosmetic' && u.owned);
-    return cosmetic?.color || '#3B82F6';
-  };
+  const getPlayerColor = useCallback(() => {
+    if (selectedCosmetic) {
+      const cosmetic = upgrades.find(u => u.id === selectedCosmetic && u.owned);
+      return cosmetic?.color || '#3B82F6'; // Default if selected cosmetic not found or not owned
+    }
+    return '#3B82F6'; // Default player color
+  }, [selectedCosmetic, upgrades]);
 
   const draw = () => {
     const canvas = canvasRef.current;
@@ -786,7 +789,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
   const drawLeaderboard = (ctx: CanvasRenderingContext2D) => {
     const playerBlob = { ...player, size: playerSize };
-    const allBlobs = [playerBlob, ...bots].sort((a, b) => b.size - a.sizenew).slice(0, 5);
+    const allBlobs = [playerBlob, ...bots].sort((a, b) => b.size - a.size).slice(0, 5); // Corrected 'a.sizenew' to 'a.size'
     
     ctx.save(); // Save context for leaderboard
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
