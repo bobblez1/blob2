@@ -253,7 +253,7 @@ const INITIAL_CHALLENGES: Challenge[] = [
     currentValue: 0,
     completed: false,
     reward: 100,
-    type: CHALLENGE.EAT_BLOBS,
+    type: CHALLENGE_TYPES.EAT_BLOBS, // Corrected from CHALLENGE.EAT_BLOBS
   },
   {
     id: 'survive_5_minutes',
@@ -347,6 +347,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Deduct points from stats managed by useGameStats
+    // This now directly calls setStats from useGameStats, which updates the persistent storage
+    // and triggers re-renders for components consuming `stats`.
     setStats(prev => ({
       ...prev,
       totalPoints: prev.totalPoints - finalPrice,
@@ -362,7 +364,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     
     if (telegramStars < starCost) {
       console.log('Not enough Telegram Stars');
-      return;
+      return [];
     }
 
     // Deduct stars
@@ -505,7 +507,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           
           if (completed && !challenge.completed) {
             // Auto-claim reward
-            setStats(prevStats => ({ // Update stats via useGameStats's setStats
+            // This now directly calls setStats from useGameStats, which updates the persistent storage
+            // and triggers re-renders for components consuming `stats`.
+            setStats(prevStats => ({ 
               ...prevStats,
               totalPoints: prevStats.totalPoints + challenge.reward,
             }));
@@ -527,7 +531,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const challenge = challenges.find(c => c.id === challengeId);
     if (!challenge || !challenge.completed) return;
 
-    setStats(prev => ({ // Update stats via useGameStats's setStats
+    // This now directly calls setStats from useGameStats, which updates the persistent storage
+    // and triggers re-renders for components consuming `stats`.
+    setStats(prev => ({ 
       ...prev,
       totalPoints: prev.totalPoints + challenge.reward,
     }));
