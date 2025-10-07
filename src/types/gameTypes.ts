@@ -20,6 +20,8 @@ export interface BotBlob extends BaseBlob {
   team?: 'red' | 'blue';
   aggressionLevel: number;
   lastTargetChange: number;
+  lastAIUpdateTime?: number; // Added for AI optimization
+  speed: number; // Added to store current speed
 }
 
 export interface FoodBlob extends BaseBlob {

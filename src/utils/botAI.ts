@@ -7,6 +7,8 @@ export interface BotAction {
   targetY: number;
   speed: number;
   foundTarget: boolean;
+  vx: number; // Added for persistent movement
+  vy: number; // Added for persistent movement
 }
 
 export const createBot = (gameMode: string, team?: 'red' | 'blue'): BotBlob => {
@@ -26,6 +28,8 @@ export const createBot = (gameMode: string, team?: 'red' | 'blue'): BotBlob => {
     team: team,
     aggressionLevel: Math.random() * 0.5 + 0.5, // 0.5 to 1.0
     lastTargetChange: Date.now(),
+    lastAIUpdateTime: Date.now(), // Initialize last AI update time
+    speed: GAME_CONSTANTS.BOT_BASE_SPEED, // Initialize speed
   };
 };
 
@@ -57,6 +61,8 @@ export const calculateBotAction = (
   let targetX = bot.x;
   let targetY = bot.y;
   let foundTarget = false;
+  let currentVx = bot.vx;
+  let currentVy = bot.vy;
   
   // Battle Royale: Prioritize staying in safe zone (HIGHEST PRIORITY)
   if (gameMode === 'battleRoyale' && playAreaRadius) {
@@ -74,8 +80,10 @@ export const calculateBotAction = (
       if (distance > 0) {
         // Move towards center with high priority
         const urgency = Math.min(2, distanceFromCenter / playAreaRadius);
-        targetX = bot.x + (dx / distance) * botBaseSpeed * urgency * 2;
-        targetY = bot.y + (dy / distance) * botBaseSpeed * urgency * 2;
+        currentVx = (dx / distance) * botBaseSpeed * urgency * 2;
+        currentVy = (dy / distance) * botBaseSpeed * urgency * 2;
+        targetX = bot.x + currentVx;
+        targetY = bot.y + currentVy;
         foundTarget = true;
       }
     }
@@ -117,8 +125,10 @@ export const calculateBotAction = (
     
       if (distance > 0) {
         const avoidanceStrength = Math.min(2, nearestThreat.size / bot.size);
-        targetX = bot.x + (dx / distance) * botBaseSpeed * avoidanceStrength;
-        targetY = bot.y + (dy / distance) * botBaseSpeed * avoidanceStrength;
+        currentVx = (dx / distance) * botBaseSpeed * avoidanceStrength;
+        currentVy = (dy / distance) * botBaseSpeed * avoidanceStrength;
+        targetX = bot.x + currentVx;
+        targetY = bot.y + currentVy;
         foundTarget = true;
       }
     }
@@ -156,8 +166,10 @@ export const calculateBotAction = (
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       if (distance > 0) {
-        targetX = bot.x + (dx / distance) * botBaseSpeed * 1.5;
-        targetY = bot.y + (dy / distance) * botBaseSpeed * 1.5;
+        currentVx = (dx / distance) * botBaseSpeed * 1.5;
+        currentVy = (dy / distance) * botBaseSpeed * 1.5;
+        targetX = bot.x + currentVx;
+        targetY = bot.y + currentVy;
         foundTarget = true;
       }
     }
@@ -196,8 +208,10 @@ export const calculateBotAction = (
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       if (distance > 0) {
-        targetX = bot.x + (dx / distance) * botBaseSpeed * 1.3;
-        targetY = bot.y + (dy / distance) * botBaseSpeed * 1.3;
+        currentVx = (dx / distance) * botBaseSpeed * 1.3;
+        currentVy = (dy / distance) * botBaseSpeed * 1.3;
+        targetX = bot.x + currentVx;
+        targetY = bot.y + currentVy;
         foundTarget = true;
       }
     }
@@ -221,8 +235,10 @@ export const calculateBotAction = (
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       if (distance > 0) {
-        targetX = bot.x + (dx / distance) * botBaseSpeed;
-        targetY = bot.y + (dy / distance) * botBaseSpeed;
+        currentVx = (dx / distance) * botBaseSpeed;
+        currentVy = (dy / distance) * botBaseSpeed;
+        targetX = bot.x + currentVx;
+        targetY = bot.y + currentVy;
         foundTarget = true;
       }
     }
@@ -231,30 +247,32 @@ export const calculateBotAction = (
   // Random movement with direction persistence
   if (!foundTarget) {
     if (!bot.vx || !bot.vy || Math.random() < 0.02 || now - bot.lastTargetChange > 3000) {
-      bot.vx = (Math.random() - 0.5) * 4;
-      bot.vy = (Math.random() - 0.5) * 4;
+      currentVx = (Math.random() - 0.5) * 4;
+      currentVy = (Math.random() - 0.5) * 4;
       bot.lastTargetChange = now;
     }
-    targetX = bot.x + bot.vx * botBaseSpeed;
-    targetY = bot.y + bot.vy * botBaseSpeed;
+    targetX = bot.x + currentVx * botBaseSpeed;
+    targetY = bot.y + currentVy * botBaseSpeed;
   }
   
   // Bounce off walls
-  if (targetX < bot.size || targetX > GAME_CONSTANTS.CANVAS_WIDTH - bot.size) {
-    bot.vx = -(bot.vx || 0);
-    targetX = Math.max(bot.size, Math.min(GAME_CONSTANTS.CANVAS_WIDTH - bot.size, targetX));
+  if (targetX < bot.size / 2 || targetX > GAME_CONSTANTS.CANVAS_WIDTH - bot.size / 2) {
+    currentVx = -(currentVx || 0);
+    targetX = Math.max(bot.size / 2, Math.min(GAME_CONSTANTS.CANVAS_WIDTH - bot.size / 2, targetX));
   }
-  if (targetY < bot.size || targetY > GAME_CONSTANTS.CANVAS_HEIGHT - bot.size) {
-    bot.vy = -(bot.vy || 0);
-    targetY = Math.max(bot.size, Math.min(GAME_CONSTANTS.CANVAS_HEIGHT - bot.size, targetY));
+  if (targetY < bot.size / 2 || targetY > GAME_CONSTANTS.CANVAS_HEIGHT - bot.size / 2) {
+    currentVy = -(currentVy || 0);
+    targetY = Math.max(bot.size / 2, Math.min(GAME_CONSTANTS.CANVAS_HEIGHT - bot.size / 2, targetY));
   }
   
-  const clamped = clampToCanvas(targetX, targetY, bot.size);
+  const clamped = clampToCanvas(targetX, targetY, bot.size / 2);
   
   return {
     targetX: clamped.x,
     targetY: clamped.y,
     speed: botBaseSpeed,
     foundTarget,
+    vx: currentVx,
+    vy: currentVy,
   };
 };

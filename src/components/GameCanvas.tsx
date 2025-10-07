@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useGame } from '../context/GameContext';
 import { GAME_CONSTANTS, FOOD_COLORS, UPGRADE_IDS, CHALLENGE_TYPES, TEAM_COLORS } from '../constants/gameConstants';
-import { PlayerBlob, BotBlob, FoodBlob } from '../types/gameTypes';
-import { calculateDistance, getEvolutionStage, getEvolutionColor, isInViewport, clampToCanvas, generateUniqueId, vibrate, playSound } from '../utils/gameUtils';
+import { PlayerBlob, BotBlob, FoodBlob, GameBlob } from '../types/gameTypes';
+import { calculateDistance, getEvolutionStage, getEvolutionColor, isInViewport, clampToCanvas, generateUniqueId, vibrate, playSound, createSpatialGrid, getNearbyBlobs } from '../utils/gameUtils';
 import { createBot, calculateBotAction } from '../utils/botAI';
 import { Play, Pause, RotateCcw, Heart, Home, Zap, Shield, Star } from 'lucide-react';
 
@@ -17,6 +17,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   const keysRef = useRef<Set<string>>(new Set());
   const lastDecayTime = useRef<number>(Date.now());
   const gameStartTime = useRef<number>(Date.now());
+  const botAIUpdateInterval = 150; // Bots update AI every 150ms
   
   const { 
     stats, 
@@ -102,16 +103,35 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     setShieldActive(!!shield);
   }, [activePowerUps]);
 
-  // Mouse and keyboard event handlers
+  // Mouse and keyboard event handlers & Canvas setup for high-DPI
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const setCanvasDimensions = () => {
+      const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
+      
+      // Set canvas internal drawing buffer size
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+
+      // Scale the context to ensure drawings are crisp
+      ctx.scale(dpr, dpr);
+    };
+
+    setCanvasDimensions(); // Set initial dimensions
+    window.addEventListener('resize', setCanvasDimensions); // Adjust on resize
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
       mouseRef.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: (e.clientX - rect.left) / dpr, // Adjust for DPR
+        y: (e.clientY - rect.top) / dpr, // Adjust for DPR
       };
     };
 
@@ -127,17 +147,13 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       keysRef.current.delete(e.key.toLowerCase());
     };
 
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('keyup', handleKeyUp);
-    }
+    canvas.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
     return () => {
-      if (canvas) {
-        canvas.removeEventListener('mousemove', handleMouseMove);
-      }
+      window.removeEventListener('resize', setCanvasDimensions);
+      canvas.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
@@ -205,9 +221,13 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     let currentFoods = [...foods];
     let currentBots = [...bots];
     let newPlayerSize = playerSize;
-    
-    // Blob decay mechanic - slowly shrink if inactive
     const now = Date.now();
+
+    // Create spatial grid for efficient collision detection
+    const allBlobs: GameBlob[] = [{ ...player, size: newPlayerSize }, ...currentBots, ...currentFoods];
+    const spatialGrid = createSpatialGrid(allBlobs, 100); // Cell size 100
+
+    // Blob decay mechanic - slowly shrink if inactive
     if (now - lastDecayTime.current > GAME_CONSTANTS.DECAY_INTERVAL) {
       if (newPlayerSize > GAME_CONSTANTS.PLAYER_MIN_SIZE) {
         growPlayer(-GAME_CONSTANTS.DECAY_AMOUNT);
@@ -257,7 +277,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       
       // Apply movement
       if (moveX !== 0 || moveY !== 0) {
-        const clamped = clampToCanvas(player.x + moveX, player.y + moveY, newPlayerSize);
+        const clamped = clampToCanvas(player.x + moveX, player.y + moveY, newPlayerSize / 2);
         setPlayer(prev => ({
           ...prev,
           x: clamped.x,
@@ -277,13 +297,20 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
     // Player-Food Interaction
     let totalGrowthThisFrame = 0;
+    const playerBlobForGrid = { ...player, size: newPlayerSize };
+    const nearbyFoodsForPlayer = getNearbyBlobs(playerBlobForGrid.x, playerBlobForGrid.y, spatialGrid)
+      .filter(blob => (blob as FoodBlob).color); // Filter for actual food blobs
+
     currentFoods = currentFoods.filter(food => {
-      const distance = calculateDistance(player.x, player.y, food.x, food.y);
-      if (distance < newPlayerSize / 2 + food.size / 2) {
-        totalGrowthThisFrame += GAME_CONSTANTS.FOOD_GROWTH;
-        playSound('eat', settings.soundEnabled);
-        vibrate(50, settings.vibrateEnabled);
-        return false; // Remove food
+      // Only check collision if food is nearby
+      if (nearbyFoodsForPlayer.some(nf => nf.id === food.id)) {
+        const distance = calculateDistance(player.x, player.y, food.x, food.y);
+        if (distance < newPlayerSize / 2 + food.size / 2) {
+          totalGrowthThisFrame += GAME_CONSTANTS.FOOD_GROWTH;
+          playSound('eat', settings.soundEnabled);
+          vibrate(50, settings.vibrateEnabled);
+          return false; // Remove food
+        }
       }
       return true; // Keep food
     });
@@ -297,11 +324,17 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     // Bot-Food Interaction
     currentBots = currentBots.map(bot => {
       let botGrowth = 0;
+      const nearbyFoodsForBot = getNearbyBlobs(bot.x, bot.y, spatialGrid)
+        .filter(blob => (blob as FoodBlob).color); // Filter for actual food blobs
+
       currentFoods = currentFoods.filter(food => {
-        const distance = calculateDistance(bot.x, bot.y, food.x, food.y);
-        if (distance < bot.size / 2 + food.size / 2) {
-          botGrowth += GAME_CONSTANTS.FOOD_GROWTH * 0.7; // Bots grow slightly less from food
-          return false; // Remove food
+        // Only check collision if food is nearby
+        if (nearbyFoodsForBot.some(nf => nf.id === food.id)) {
+          const distance = calculateDistance(bot.x, bot.y, food.x, food.y);
+          if (distance < bot.size / 2 + food.size / 2) {
+            botGrowth += GAME_CONSTANTS.FOOD_GROWTH * 0.7; // Bots grow slightly less from food
+            return false; // Remove food
+          }
         }
         return true; // Keep food
       });
@@ -311,30 +344,43 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
     // Update bots with improved AI
     currentBots = currentBots.map(bot => {
-      const action = calculateBotAction(
-        bot, 
-        { ...player, size: newPlayerSize } as PlayerBlob, 
-        currentFoods, 
-        currentBots.filter(b => b.id !== bot.id), 
-        gameMode, 
-        selectedTeam, 
-        timeRemaining, 
-        shieldActive,
-        playAreaRadius
-      );
-      
-      // Battle Royale: damage bots outside play area
-      if (gameMode === 'battleRoyale') {
-        const centerX = GAME_CONSTANTS.CANVAS_WIDTH / 2;
-        const centerY = GAME_CONSTANTS.CANVAS_HEIGHT / 2;
-        const distanceFromCenter = calculateDistance(bot.x, bot.y, centerX, centerY);
+      // Only update AI if enough time has passed or if it's a new bot
+      if (!bot.lastAIUpdateTime || now - bot.lastAIUpdateTime > botAIUpdateInterval) {
+        const otherBotsForAI = getNearbyBlobs(bot.x, bot.y, spatialGrid)
+          .filter(b => (b as BotBlob).isBot && b.id !== bot.id) as BotBlob[];
+        const nearbyFoodsForAI = getNearbyBlobs(bot.x, bot.y, spatialGrid)
+          .filter(f => !(f as BotBlob).isBot && !(f as PlayerBlob).isPlayer) as FoodBlob[];
+
+        const action = calculateBotAction(
+          bot, 
+          { ...player, size: newPlayerSize } as PlayerBlob, 
+          nearbyFoodsForAI, 
+          otherBotsForAI, 
+          gameMode, 
+          selectedTeam, 
+          timeRemaining, 
+          shieldActive,
+          playAreaRadius
+        );
         
-        if (distanceFromCenter > playAreaRadius) {
-          bot.size = Math.max(5, bot.size - 1); // Shrink if outside safe zone
+        // Battle Royale: damage bots outside play area
+        if (gameMode === 'battleRoyale') {
+          const centerX = GAME_CONSTANTS.CANVAS_WIDTH / 2;
+          const centerY = GAME_CONSTANTS.CANVAS_HEIGHT / 2;
+          const distanceFromCenter = calculateDistance(bot.x, bot.y, centerX, centerY);
+          
+          if (distanceFromCenter > playAreaRadius) {
+            bot.size = Math.max(5, bot.size - 1); // Shrink if outside safe zone
+          }
         }
+        
+        const clamped = clampToCanvas(action.targetX, action.targetY, bot.size / 2);
+        return { ...bot, x: clamped.x, y: clamped.y, lastAIUpdateTime: now, vx: action.vx, vy: action.vy };
+      } else {
+        // Continue previous movement if AI not updated
+        const clamped = clampToCanvas(bot.x + bot.vx * bot.speed, bot.y + bot.vy * bot.speed, bot.size / 2);
+        return { ...bot, x: clamped.x, y: clamped.y };
       }
-      
-      return { ...bot, x: action.targetX, y: action.targetY };
     });
     
     // Bot-Bot Interaction (bots eating other bots)
@@ -343,7 +389,10 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       if (botsToRemove.has(bot.id)) return bot;
       
       let botGrowth = 0;
-      currentBots.forEach(otherBot => {
+      const nearbyBlobsForBot = getNearbyBlobs(bot.x, bot.y, spatialGrid)
+        .filter(b => (b as BotBlob).isBot && b.id !== bot.id) as BotBlob[];
+
+      nearbyBlobsForBot.forEach(otherBot => {
         if (bot.id !== otherBot.id && !botsToRemove.has(otherBot.id)) {
           const distance = calculateDistance(bot.x, bot.y, otherBot.x, otherBot.y);
           // In team mode, bots can only eat bots from different teams
@@ -398,7 +447,10 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const powerUpMultiplier = activePowerUps.find(p => p.id === UPGRADE_IDS.DOUBLE_POINTS) ? 2 : 1;
     
     const botsToRemoveFromPlayer = new Set<string>();
-    currentBots.forEach(bot => {
+    const nearbyBotsForPlayer = getNearbyBlobs(player.x, player.y, spatialGrid)
+      .filter(blob => (blob as BotBlob).isBot) as BotBlob[];
+
+    nearbyBotsForPlayer.forEach(bot => {
       if (botsToRemoveFromPlayer.has(bot.id)) return;
       
       const distance = calculateDistance(player.x, player.y, bot.x, bot.y);
@@ -504,7 +556,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     if (!ctx) return;
     
     // Clear canvas
-    ctx.clearRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
+    // Use clientWidth/clientHeight for clearing, as ctx is already scaled
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
     
     // Draw grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
@@ -559,12 +612,12 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       if (isInViewport(food.x, food.y, camera.x, camera.y, 20)) {
         ctx.fillStyle = food.color;
         ctx.beginPath();
-        ctx.arc(screenX, screenY, food.size, 0, Math.PI * 2);
+        ctx.arc(screenX, screenY, food.size / 2, 0, Math.PI * 2); // Divide size by 2 for radius
         ctx.fill();
         
-        // Add subtle glow
+        // Add subtle glow (reduced blur for performance)
         ctx.shadowColor = food.color;
-        ctx.shadowBlur = 3;
+        ctx.shadowBlur = 1; // Reduced from 3
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -609,9 +662,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const evolutionStage = getEvolutionStage(playerSize);
     
     // Player glow based on evolution
-    const glowIntensity = evolutionStage === 'legendary' ? 20 : 
-                         evolutionStage === 'epic' ? 15 : 
-                         evolutionStage === 'rare' ? 10 : 0;
+    const glowIntensity = evolutionStage === 'legendary' ? 10 : // Reduced from 20
+                         evolutionStage === 'epic' ? 7 : // Reduced from 15
+                         evolutionStage === 'rare' ? 5 : 0; // Reduced from 10
     
     if (glowIntensity > 0) {
       ctx.shadowColor = getPlayerColor();
@@ -719,10 +772,11 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const touch = e.touches[0];
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
+    const dpr = window.devicePixelRatio || 1;
     
     mouseRef.current = {
-      x: touch.clientX - rect.left,
-      y: touch.clientY - rect.top,
+      x: (touch.clientX - rect.left) / dpr, // Adjust for DPR
+      y: (touch.clientY - rect.top) / dpr, // Adjust for DPR
     };
   };
 
@@ -794,8 +848,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       {/* Game Canvas */}
       <canvas
         ref={canvasRef}
-        width={GAME_CONSTANTS.VIEWPORT_WIDTH}
-        height={GAME_CONSTANTS.VIEWPORT_HEIGHT}
+        // width and height attributes are now set dynamically in useEffect
+        // The CSS width/height will determine the display size, and DPR handles resolution
         className="w-full h-full bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 cursor-crosshair"
         onTouchStart={handleTouch}
         onTouchMove={handleTouch}
