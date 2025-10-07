@@ -12,6 +12,7 @@ import {
   Target,
   Crown
 } from 'lucide-react';
+import { Button } from './ui/button'; // Import the new Button component
 
 interface HomeScreenProps {
   onPlay: () => void;
@@ -275,18 +276,18 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
       {/* Main Action Buttons */}
       <div className="relative z-10 flex-1 flex flex-col justify-center px-6 space-y-4">
         {/* Play Button */}
-        <button
+        <Button
           onClick={onPlay}
           disabled={stats.livesRemaining <= 0}
-          className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 px-8 rounded-2xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100"
+          className="w-full py-4 px-8 rounded-2xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100 bg-green-500 hover:bg-green-600 text-white text-xl font-bold"
         >
           <div className="flex items-center justify-center gap-3">
             <Play size={24} />
-            <span className="text-xl">
+            <span>
               {stats.livesRemaining > 0 ? 'PLAY NOW' : 'NO LIVES LEFT'}
             </span>
           </div>
-        </button>
+        </Button>
 
         {/* Secondary Buttons */}
         <div className="grid grid-cols-3 gap-3">
