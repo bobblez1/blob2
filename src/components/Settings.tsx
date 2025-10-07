@@ -17,6 +17,7 @@ import {
   Paintbrush
 } from 'lucide-react';
 import { Button } from './ui/button'; // Import Button
+import { FOOD_COLORS } from '../constants/gameConstants'; // Import FOOD_COLORS
 
 interface SettingsProps {
   onBack: () => void;
