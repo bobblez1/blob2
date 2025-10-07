@@ -5,6 +5,7 @@ import { PlayerBlob, BotBlob, FoodBlob, GameBlob } from '../types/gameTypes';
 import { calculateDistance, getEvolutionStage, getEvolutionColor, isInViewport, clampToCanvas, generateUniqueId, vibrate, playSound, createSpatialGrid, getNearbyBlobs } from '../utils/gameUtils';
 import { createBot, calculateBotAction } from '../utils/botAI';
 import { Play, Pause, RotateCcw, Heart, Home, Zap, Shield, Star } from 'lucide-react';
+import { Button } from './ui/button'; // Import Button
 
 interface GameCanvasProps {
   onGameEnd: () => void;
@@ -627,7 +628,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     for (let y = -camera.y % gridSize; y < GAME_CONSTANTS.VIEWPORT_HEIGHT; y += gridSize) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(GAME_CONSTANTS.VIEWPORT_WIDTH, y);
+      ctx.lineTo(0, y); // Corrected from x, y to 0, y
+      ctx.lineTo(GAME_CONSTANTS.VIEWPORT_WIDTH, y); // Corrected from x, GAME_CONSTANTS.VIEWPORT_HEIGHT to GAME_CONSTANTS.VIEWPORT_WIDTH, y
       ctx.stroke();
     }
     
@@ -898,18 +900,22 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
             )}
           </div>
           <div className="flex items-center gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onGameEnd}
               className="p-1.5 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
             >
               <Home size={14} />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsPaused(!isPaused)}
               className="p-1.5 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
             >
               {isPaused ? <Play size={14} /> : <Pause size={14} />}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -936,13 +942,13 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-20">
           <div className="bg-gray-900/90 p-6 rounded-2xl text-white text-center">
             <h2 className="text-xl font-bold mb-4">Game Paused</h2>
-            <button
+            <Button
               onClick={() => setIsPaused(false)}
               className="bg-green-500 hover:bg-green-600 px-6 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 mx-auto"
             >
               <Play size={18} />
               Resume
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -960,22 +966,22 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
                 </p>
                 
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     onClick={onGameEnd}
                     className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 justify-center text-sm"
                   >
                     <Home size={16} />
                     Home
-                  </button>
+                  </Button>
                   
                   {stats.livesRemaining > 0 && (
-                    <button
+                    <Button
                       onClick={handleRestart}
                       className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 justify-center text-sm"
                     >
                       <RotateCcw size={16} />
                       Retry
-                    </button>
+                    </Button>
                   )}
                 </div>
                 
@@ -990,13 +996,13 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
               <>
                 <h2 className="text-xl font-bold mb-4">Ready to Play?</h2>
                 <p className="text-gray-300 mb-6 text-sm">Eat food to grow, eat smaller blobs for points!</p>
-                <button
+                <Button
                   onClick={handleStartGame}
                   className="bg-green-500 hover:bg-green-600 px-6 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 mx-auto"
                 >
                   <Play size={18} />
                   Start Game
-                </button>
+                </Button>
               </>
             )}
           </div>
