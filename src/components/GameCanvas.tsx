@@ -60,6 +60,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   const [timeRemaining, setTimeRemaining] = useState(GAME_CONSTANTS.TIME_ATTACK_DURATION);
   const [playAreaRadius, setPlayAreaRadius] = useState(Math.min(GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT) / 2);
 
+  // Ref to store dynamic rendering parameters (scale, offset)
+  const renderParamsRef = useRef({ scale: 1, offsetX: 0, offsetY: 0, dpr: 1 });
+
   // Initialize game
   useEffect(() => {
     console.log('Initializing game with mode:', gameMode);
@@ -121,6 +124,30 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
       // Scale the context to ensure drawings are crisp
       ctx.scale(dpr, dpr);
+
+      // Calculate render parameters for fitting game world into canvas
+      const canvasLogicalWidth = rect.width;
+      const canvasLogicalHeight = rect.height;
+
+      const gameAspectRatio = GAME_CONSTANTS.VIEWPORT_WIDTH / GAME_CONSTANTS.VIEWPORT_HEIGHT;
+      const canvasAspectRatio = canvasLogicalWidth / canvasLogicalHeight;
+
+      let scale, offsetX, offsetY;
+
+      if (canvasAspectRatio > gameAspectRatio) {
+        // Canvas is wider than game, fit by height (pillarbox)
+        scale = canvasLogicalHeight / GAME_CONSTANTS.VIEWPORT_HEIGHT;
+        const scaledWidth = GAME_CONSTANTS.VIEWPORT_WIDTH * scale;
+        offsetX = (canvasLogicalWidth - scaledWidth) / 2;
+        offsetY = 0;
+      } else {
+        // Canvas is taller or same aspect ratio as game, fit by width (letterbox)
+        scale = canvasLogicalWidth / GAME_CONSTANTS.VIEWPORT_WIDTH;
+        const scaledHeight = GAME_CONSTANTS.VIEWPORT_HEIGHT * scale;
+        offsetX = 0;
+        offsetY = (canvasLogicalHeight - scaledHeight) / 2;
+      }
+      renderParamsRef.current = { scale, offsetX, offsetY, dpr };
     };
 
     setCanvasDimensions(); // Set initial dimensions
@@ -128,10 +155,15 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
+      const { scale, offsetX, offsetY } = renderParamsRef.current;
+      
+      const rawX = e.clientX - rect.left;
+      const rawY = e.clientY - rect.top;
+
       // Map mouse coordinates from actual canvas display size to game's logical viewport
       mouseRef.current = {
-        x: ((e.clientX - rect.left) / rect.width) * GAME_CONSTANTS.VIEWPORT_WIDTH,
-        y: ((e.clientY - rect.top) / rect.height) * GAME_CONSTANTS.VIEWPORT_HEIGHT,
+        x: (rawX - offsetX) / scale,
+        y: (rawY - offsetY) / scale,
       };
     };
 
@@ -261,8 +293,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       if (keysRef.current.has('a') || keysRef.current.has('arrowleft')) moveX -= speed;
       if (keysRef.current.has('d') || keysRef.current.has('arrowright')) moveX += speed;
       
-      // Mouse movement
-      if (Math.abs(targetX - centerX) > 5 || Math.abs(targetY - centerY) > 5) {
+      // Mouse/Touch movement - reduced dead zone for better sensitivity
+      if (Math.abs(targetX - centerX) > 1 || Math.abs(targetY - centerY) > 1) {
         const dx = targetX - centerX;
         const dy = targetY - centerY;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -556,11 +588,19 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    const { scale, offsetX, offsetY, dpr } = renderParamsRef.current;
+
+    // Clear the entire physical canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Fill background with black bars (in logical pixels)
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
     
-    // Save context state before drawing grid and other elements
     ctx.save();
+    // Translate and scale to draw game content within the logical viewport
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
 
     // Draw grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
@@ -781,10 +821,14 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     
+    const { scale, offsetX, offsetY } = renderParamsRef.current;
+    const rawX = touch.clientX - rect.left;
+    const rawY = touch.clientY - rect.top;
+
     // Map touch coordinates from actual canvas display size to game's logical viewport
     mouseRef.current = {
-      x: ((touch.clientX - rect.left) / rect.width) * GAME_CONSTANTS.VIEWPORT_WIDTH,
-      y: ((touch.clientY - rect.top) / rect.height) * GAME_CONSTANTS.VIEWPORT_HEIGHT,
+      x: (rawX - offsetX) / scale,
+      y: (rawY - offsetY) / scale,
     };
   };
 
@@ -856,12 +900,10 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       {/* Game Canvas */}
       <canvas
         ref={canvasRef}
-        // width and height attributes are now set dynamically in useEffect
-        // The CSS width/height will determine the display size, and DPR handles resolution
         className="w-full h-full bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 cursor-crosshair"
         onTouchStart={handleTouch}
         onTouchMove={handleTouch}
-        style={{ touchAction: 'none', aspectRatio: `${GAME_CONSTANTS.VIEWPORT_WIDTH}/${GAME_CONSTANTS.VIEWPORT_HEIGHT}` }}
+        style={{ touchAction: 'none' }} // Removed aspectRatio here
       />
 
       {/* Pause Screen */}
