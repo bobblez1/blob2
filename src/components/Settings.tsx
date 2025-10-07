@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { FOOD_COLORS } from '../constants/gameConstants';
 import { 
   ArrowLeft, 
   User, 
@@ -70,7 +69,7 @@ function Settings({ onBack }: SettingsProps) {
             <div className="flex justify-between items-center">
               <span className="text-gray-300">Player ID</span>
               <span className="font-mono text-sm bg-gray-700/50 px-2 py-1 rounded">
-                #{Math.random().toString(36).substr(2, 8).toUpperCase()}
+                #{stats.playerId.toUpperCase()}
               </span>
             </div>
             
