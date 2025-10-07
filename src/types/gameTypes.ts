@@ -35,6 +35,7 @@ export interface GameSettings {
   vibrateEnabled: boolean;
   foodColorMode: 'fixed' | 'random';
   selectedFoodColor: string;
+  selectedBackgroundColor: 'gradient' | 'white' | 'grey' | 'black'; // Added background color setting
 }
 
 export interface SpatialGrid {

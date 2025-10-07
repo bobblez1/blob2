@@ -212,7 +212,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps]);
+  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor]); // Added settings.selectedBackgroundColor to dependencies
 
   const generateBots = () => {
     const newBots: BotBlob[] = [];
@@ -602,6 +602,19 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
+    // Draw game background based on settings
+    if (settings.selectedBackgroundColor === 'white') {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
+    } else if (settings.selectedBackgroundColor === 'grey') {
+      ctx.fillStyle = '#4B5563'; // Tailwind gray-700
+      ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
+    } else if (settings.selectedBackgroundColor === 'black') {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, GAME_CONSTANTS.VIEWPORT_WIDTH, GAME_CONSTANTS.VIEWPORT_HEIGHT);
+    }
+    // If 'gradient', the CSS background of the parent div will show through
+
     // Draw grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
@@ -636,7 +649,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       // Left rectangle (between top and bottom)
       ctx.fillRect(0, Math.max(0, centerY - playAreaRadius), Math.max(0, centerX - playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
       // Right rectangle (between top and bottom)
-      ctx.fillRect(Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.max(0, centerY - playAreaRadius), GAME_CONSTANTS.VIEWPORT_WIDTH - Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
+      ctx.fillRect(Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.max(0, centerY + playAreaRadius), GAME_CONSTANTS.VIEWPORT_WIDTH - Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
 
       // Draw safe zone border
       ctx.strokeStyle = '#00FF00';
@@ -840,8 +853,23 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     startGame();
   };
 
+  const getBackgroundClass = () => {
+    switch (settings.selectedBackgroundColor) {
+      case 'gradient':
+        return 'bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900';
+      case 'white':
+        return 'bg-white';
+      case 'grey':
+        return 'bg-gray-700';
+      case 'black':
+        return 'bg-black';
+      default:
+        return 'bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900';
+    }
+  };
+
   return (
-    <div className="relative w-full h-full flex flex-col">
+    <div className={`relative w-full h-full flex flex-col ${getBackgroundClass()}`}> {/* Moved gradient class here */}
       {/* Game HUD */}
       <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex justify-between items-center text-white text-sm">
@@ -900,10 +928,10 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       {/* Game Canvas */}
       <canvas
         ref={canvasRef}
-        className="w-full h-full bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 cursor-crosshair"
+        className="w-full h-full cursor-crosshair" // Removed background class from canvas
         onTouchStart={handleTouch}
         onTouchMove={handleTouch}
-        style={{ touchAction: 'none' }} // Removed aspectRatio here
+        style={{ touchAction: 'none' }}
       />
 
       {/* Pause Screen */}

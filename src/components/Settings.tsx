@@ -14,7 +14,8 @@ import {
   Shield,
   Star,
   Heart,
-  Palette
+  Palette,
+  Paintbrush
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -183,10 +184,42 @@ function Settings({ onBack }: SettingsProps) {
                 </div>
               )}
             </div>
+
+            {/* Background Appearance Settings */}
+            <div className="space-y-3">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Paintbrush size={16} className="text-indigo-400" />
+                Background Appearance
+              </h4>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Game Background</span>
+                <div className="flex gap-2">
+                  {[
+                    { id: 'gradient', name: 'Gradient', color: 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900' },
+                    { id: 'white', name: 'White', color: 'bg-white' },
+                    { id: 'grey', name: 'Grey', color: 'bg-gray-700' },
+                    { id: 'black', name: 'Black', color: 'bg-black' },
+                  ].map(bgOption => (
+                    <button
+                      key={bgOption.id}
+                      onClick={() => updateSettings({ selectedBackgroundColor: bgOption.id as any })}
+                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                        settings.selectedBackgroundColor === bgOption.id
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {bgOption.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
           
           {/* Cosmetic Selection */}
-          <div className="space-y-3">
+          <div className="space-y-3 mt-6"> {/* Added mt-6 for spacing */}
             <h4 className="font-semibold flex items-center gap-2">
               <Palette size={16} className="text-pink-400" />
               Active Cosmetic

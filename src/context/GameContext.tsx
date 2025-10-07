@@ -14,13 +14,6 @@ interface GameStats {
   loginStreak: number;
 }
 
-interface GameSettings {
-  soundEnabled: boolean;
-  vibrateEnabled: boolean;
-  foodColorMode: 'fixed' | 'random';
-  selectedFoodColor: string;
-}
-
 interface Upgrade {
   id: string;
   name: string;
@@ -113,6 +106,7 @@ const INITIAL_SETTINGS: GameSettings = {
   vibrateEnabled: true,
   foodColorMode: 'fixed',
   selectedFoodColor: FOOD_COLORS.RED,
+  selectedBackgroundColor: 'gradient', // Default to gradient
 };
 
 const INITIAL_UPGRADES: Upgrade[] = [
