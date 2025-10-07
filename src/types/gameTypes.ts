@@ -42,6 +42,30 @@ export interface SpatialGrid {
   [key: string]: GameBlob[];
 }
 
+export interface Upgrade {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  owned: boolean;
+  type: 'speed' | 'multiplier' | 'revive' | 'kill' | 'cosmetic' | 'powerup' | 'utility';
+  category?: 'cosmetic' | 'powerup' | 'utility' | 'permanent';
+  color?: string;
+  effectDuration?: number; // in milliseconds
+  effectValue?: number; // e.g., speed percentage (0.25 for 25%), multiplier value (2 for 2x)
+}
+
+export interface Challenge {
+  id: string;
+  name: string;
+  description: string;
+  targetValue: number;
+  currentValue: number;
+  completed: boolean;
+  reward: number;
+  type: 'eat_blobs' | 'survive_time' | 'daily_games' | 'win_streak';
+}
+
 interface DailyDeal {
   upgradeId: string;
   discountPercent: number;

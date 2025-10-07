@@ -1,36 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { UPGRADE_IDS, CHALLENGE_TYPES } from '../constants/gameConstants';
-import { GameSettings } from '../types/gameTypes';
+import { GameSettings, Upgrade, Challenge, LootReward } from '../types/gameTypes'; // Import Upgrade and Challenge interfaces
 import { FOOD_COLORS } from '../constants/gameConstants';
-import { showSuccess } from '../utils/toast'; // Import showSuccess
-import { generateUniqueId } from '../utils/gameUtils'; // Import generateUniqueId
-import { useGameSettings } from '../hooks/useGameSettings'; // Import the new hook
-import { useGameStats } from '../hooks/useGameStats'; // Import the new useGameStats hook
-
-interface Upgrade {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  owned: boolean;
-  type: 'speed' | 'multiplier' | 'revive' | 'kill' | 'cosmetic' | 'powerup' | 'utility';
-  category?: 'cosmetic' | 'powerup' | 'utility' | 'permanent';
-  color?: string;
-  effectDuration?: number; // in milliseconds
-  effectValue?: number; // e.g., speed percentage (0.25 for 25%), multiplier value (2 for 2x)
-}
-
-interface Challenge {
-  id: string;
-  name: string;
-  description: string;
-  targetValue: number;
-  currentValue: number;
-  completed: boolean;
-  reward: number;
-  type: 'eat_blobs' | 'survive_time' | 'daily_games' | 'win_streak';
-}
+import { showSuccess } from '../utils/toast';
+import { generateUniqueId } from '../utils/gameUtils';
+import { useGameSettings } from '../hooks/useGameSettings';
+import { useGameStats } from '../hooks/useGameStats';
+import { useGameProgression } from '../hooks/useGameProgression'; // Import the new hook
 
 interface ActivePowerUp {
   id: string;
@@ -44,14 +21,8 @@ interface DailyDeal {
   expiresAt: string;
 }
 
-interface LootReward {
-  type: 'points' | 'stars' | 'powerup' | 'cosmetic';
-  value: number | string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-}
-
 interface GameContextType {
-  stats: ReturnType<typeof useGameStats>['stats']; // Use stats from useGameStats
+  stats: ReturnType<typeof useGameStats>['stats'];
   upgrades: Upgrade[];
   challenges: Challenge[];
   activePowerUps: ActivePowerUp[];
@@ -64,20 +35,20 @@ interface GameContextType {
   gameMode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team';
   selectedTeam: 'red' | 'blue';
   telegramStars: number;
-  updateStats: ReturnType<typeof useGameStats>['updateStats']; // Use updateStats from useGameStats
+  updateStats: ReturnType<typeof useGameStats>['updateStats'];
   growPlayer: (amount: number) => void;
   purchaseUpgrade: (upgradeId: string, priceOverride?: number) => void;
   purchaseWithStars: (upgradeId: string) => void;
   openLootBox: (boxType: string) => LootReward[];
   startGame: (mode?: 'classic' | 'timeAttack' | 'battleRoyale' | 'team') => void;
   endGame: (finalScore: number) => void;
-  useLife: ReturnType<typeof useGameStats>['useLife']; // Use useLife from useGameStats
+  useLife: ReturnType<typeof useGameStats>['useLife'];
   revivePlayer: () => void;
   resetAllData: () => void;
   updateChallengeProgress: (challengeType: string, value: number) => void;
   claimChallengeReward: (challengeId: string) => void;
   activatePowerUp: (powerUpId: string) => void;
-  refillLives: ReturnType<typeof useGameStats>['refillLives']; // Use refillLives from useGameStats
+  refillLives: ReturnType<typeof useGameStats>['refillLives'];
   setGameMode: (mode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team') => void;
   setSelectedTeam: (team: 'red' | 'blue') => void;
   setSelectedCosmetic: (cosmeticId: string | null) => void;
@@ -88,199 +59,8 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-const INITIAL_UPGRADES: Upgrade[] = [
-  // Permanent Upgrades - Speed Boost
-  {
-    id: UPGRADE_IDS.SPEED_BOOST_1,
-    name: 'Speed Boost I',
-    description: 'Increase movement speed by 25%',
-    price: 100,
-    owned: false,
-    type: 'speed',
-    category: 'permanent',
-    effectValue: 0.25, // 25% speed increase
-  },
-  {
-    id: UPGRADE_IDS.SPEED_BOOST_2,
-    name: 'Speed Boost II',
-    description: 'Increase movement speed by 50%',
-    price: 200,
-    owned: false,
-    type: 'speed',
-    category: 'permanent',
-    effectValue: 0.50, // 50% speed increase
-  },
-  {
-    id: UPGRADE_IDS.SPEED_BOOST_3,
-    name: 'Speed Boost III',
-    description: 'Increase movement speed by 75%',
-    price: 350,
-    owned: false,
-    type: 'speed',
-    category: 'permanent',
-    effectValue: 0.75, // 75% speed increase
-  },
-  // Permanent Upgrades - Point Multiplier
-  {
-    id: UPGRADE_IDS.POINT_MULTIPLIER_1,
-    name: '2x Point Multiplier I',
-    description: 'Double points from eating blobs',
-    price: 150,
-    owned: false,
-    type: 'multiplier',
-    category: 'permanent',
-    effectValue: 2, // 2x multiplier
-  },
-  {
-    id: UPGRADE_IDS.POINT_MULTIPLIER_2,
-    name: '3x Point Multiplier II',
-    description: 'Triple points from eating blobs',
-    price: 300,
-    owned: false,
-    type: 'multiplier',
-    category: 'permanent',
-    effectValue: 3, // 3x multiplier
-  },
-  {
-    id: UPGRADE_IDS.POINT_MULTIPLIER_3,
-    name: '4x Point Multiplier III',
-    description: 'Quadruple points from eating blobs',
-    price: 500,
-    owned: false,
-    type: 'multiplier',
-    category: 'permanent',
-    effectValue: 4, // 4x multiplier
-  },
-  // Single-level Permanent Upgrades
-  {
-    id: UPGRADE_IDS.INSTANT_KILL,
-    name: 'Instant Kill',
-    description: 'Ability to eat any blob regardless of size',
-    price: 200,
-    owned: false,
-    type: 'kill',
-    category: 'permanent',
-  },
-  {
-    id: UPGRADE_IDS.AUTO_REVIVE,
-    name: 'Auto Revive',
-    description: 'Automatically revive once per game',
-    price: 250,
-    owned: false,
-    type: 'revive',
-    category: 'permanent',
-  },
-  // Cosmetic Upgrades
-  {
-    id: UPGRADE_IDS.RED_SKIN,
-    name: 'Crimson Blob',
-    description: 'Stand out with a fiery red appearance',
-    price: 50,
-    owned: false,
-    type: 'cosmetic',
-    category: 'cosmetic',
-    color: '#EF4444',
-  },
-  {
-    id: UPGRADE_IDS.GOLD_SKIN,
-    name: 'Golden Blob',
-    description: 'Shine bright with golden colors',
-    price: 100,
-    owned: false,
-    type: 'cosmetic',
-    category: 'cosmetic',
-    color: '#F59E0B',
-  },
-  {
-    id: UPGRADE_IDS.RAINBOW_SKIN,
-    name: 'Rainbow Blob',
-    description: 'Cycle through rainbow colors',
-    price: 200,
-    owned: false,
-    type: 'cosmetic',
-    category: 'cosmetic',
-    color: '#8B5CF6',
-  },
-  // Temporary Power-ups
-  {
-    id: UPGRADE_IDS.SHIELD,
-    name: '5s Shield',
-    description: 'Temporary invulnerability for 5 seconds',
-    price: 30,
-    owned: false,
-    type: 'powerup',
-    category: 'powerup',
-    effectDuration: 5000,
-  },
-  {
-    id: UPGRADE_IDS.DOUBLE_POINTS,
-    name: '1min Double Points',
-    description: 'Double all points for 1 minute',
-    price: 50,
-    owned: false,
-    type: 'powerup',
-    category: 'powerup',
-    effectDuration: 60000,
-  },
-  // Utility
-  {
-    id: UPGRADE_IDS.EXTRA_LIVES,
-    name: 'Refill Lives',
-    description: 'Instantly refill all 10 lives',
-    price: 75,
-    owned: false,
-    type: 'utility',
-    category: 'utility',
-  },
-];
-
-const INITIAL_CHALLENGES: Challenge[] = [
-  {
-    id: 'eat_10_blobs',
-    name: 'Blob Hunter',
-    description: 'Eat 10 blobs in total',
-    targetValue: 10,
-    currentValue: 0,
-    completed: false,
-    reward: 25,
-    type: CHALLENGE_TYPES.EAT_BLOBS,
-  },
-  {
-    id: 'eat_50_blobs',
-    name: 'Blob Master',
-    description: 'Eat 50 blobs in total',
-    targetValue: 50,
-    currentValue: 0,
-    completed: false,
-    reward: 100,
-    type: CHALLENGE_TYPES.EAT_BLOBS, // Corrected from CHALLENGE.EAT_BLOBS
-  },
-  {
-    id: 'survive_5_minutes',
-    name: 'Survivor',
-    description: 'Survive for 5 minutes in a single game',
-    targetValue: 5,
-    currentValue: 0,
-    completed: false,
-    reward: 50,
-    type: CHALLENGE_TYPES.SURVIVE_TIME,
-  },
-  {
-    id: 'play_daily',
-    name: 'Daily Player',
-    description: 'Play 5 games in one day',
-    targetValue: 5,
-    currentValue: 0,
-    completed: false,
-    reward: 30,
-    type: CHALLENGE_TYPES.DAILY_GAMES,
-  },
-];
-
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const { stats, currentPoints, setCurrentPoints, updateStats, finalizeGameStats, useLife, refillLives, resetStats } = useGameStats();
-  const [upgrades, setUpgrades] = useLocalStorage<Upgrade[]>('agarGameUpgrades', INITIAL_UPGRADES);
-  const [challenges, setChallenges] = useLocalStorage<Challenge[]>('agarGameChallenges', INITIAL_CHALLENGES);
+  const { stats, setStats, currentPoints, setCurrentPoints, updateStats, finalizeGameStats, useLife, refillLives, resetStats } = useGameStats();
   const { settings, updateSettings } = useGameSettings();
   const [dailyDeal, setDailyDeal] = useLocalStorage<DailyDeal | null>('agarDailyDeal', null);
   const [activePowerUps, setActivePowerUps] = useState<ActivePowerUp[]>([]);
@@ -291,14 +71,43 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [gameMode, setGameMode] = useState<'classic' | 'timeAttack' | 'battleRoyale' | 'team'>('classic');
   const [selectedTeam, setSelectedTeam] = useState<'red' | 'blue'>('red');
 
+  // Function to activate power-up, passed to useGameProgression
+  const activatePowerUp = useCallback((powerUpId: string) => {
+    const upgrade = upgrades.find(u => u.id === powerUpId);
+    if (!upgrade || !upgrade.effectDuration) return;
+
+    const expiresAt = Date.now() + upgrade.effectDuration;
+    
+    setActivePowerUps(prev => [
+      ...prev.filter(p => p.id !== powerUpId),
+      {
+        id: powerUpId,
+        name: upgrade.name,
+        expiresAt,
+      }
+    ]);
+    showSuccess(`${upgrade.name} activated!`);
+  }, [upgrades]); // Depend on upgrades to find the power-up details
+
+  const {
+    upgrades,
+    challenges,
+    purchaseUpgrade,
+    updateChallengeProgress,
+    claimChallengeReward,
+    resetProgression,
+    getSpeedBoostMultiplier,
+    getPointMultiplier,
+  } = useGameProgression({ stats, setStats }, refillLives, activatePowerUp);
+
   // Generate daily deal if none exists or if it's a new day
   useEffect(() => {
     const today = new Date().toDateString();
     if (!dailyDeal || new Date(dailyDeal.expiresAt).toDateString() !== today) {
-      const availableUpgrades = upgrades.filter(u => u.price > 50); // Only discount expensive items
+      const availableUpgrades = upgrades.filter(u => u.price > 50);
       if (availableUpgrades.length > 0) {
         const randomUpgrade = availableUpgrades[Math.floor(Math.random() * availableUpgrades.length)];
-        const discountPercent = 20 + Math.floor(Math.random() * 31); // 20-50% discount
+        const discountPercent = 20 + Math.floor(Math.random() * 31);
         
         setDailyDeal({
           upgradeId: randomUpgrade.id,
@@ -323,43 +132,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setPlayerSize(prev => Math.max(5, prev + amount));
   };
 
-  const purchaseUpgrade = (upgradeId: string, priceOverride?: number) => {
-    const upgrade = upgrades.find(u => u.id === upgradeId);
-    const finalPrice = priceOverride ?? upgrade?.price ?? 0;
-    if (!upgrade || stats.totalPoints < finalPrice) return;
-
-    if (upgrade.category === 'powerup') {
-      // Activate temporary power-up
-      activatePowerUp(upgradeId);
-    } else if (upgrade.category === 'utility') {
-      // Handle utility purchases
-      if (upgradeId === UPGRADE_IDS.EXTRA_LIVES) {
-        refillLives();
-        showSuccess('Lives refilled!');
-      }
-    } else {
-      // Permanent upgrades and cosmetics
-      setUpgrades(prev => 
-        prev.map(u => 
-          u.id === upgradeId ? { ...u, owned: true } : u
-        )
-      );
-    }
-
-    // Deduct points from stats managed by useGameStats
-    // This now directly calls setStats from useGameStats, which updates the persistent storage
-    // and triggers re-renders for components consuming `stats`.
-    setStats(prev => ({
-      ...prev,
-      totalPoints: prev.totalPoints - finalPrice,
-    }));
-  };
-
   const purchaseWithStars = (upgradeId: string) => {
     const upgrade = upgrades.find(u => u.id === upgradeId);
     if (!upgrade) return;
 
-    // Calculate star cost (for demo purposes, use price / 10)
     const starCost = Math.ceil(upgrade.price / 10);
     
     if (telegramStars < starCost) {
@@ -367,10 +143,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return [];
     }
 
-    // Deduct stars
     setTelegramStars(prev => prev - starCost);
 
-    // Apply upgrade effect
     if (upgrade.category === 'powerup') {
       activatePowerUp(upgradeId);
     } else if (upgrade.category === 'utility') {
@@ -400,10 +174,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return [];
     }
 
-    // Deduct stars
     setTelegramStars(prev => prev - cost);
 
-    // Generate rewards
     const rewards: LootReward[] = [];
     const rewardCount = boxType === 'premium_crate' ? 2 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 3);
 
@@ -425,29 +197,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const rewardType = Math.random();
       if (rewardType < 0.5) {
-        // Points reward
         const pointValues = { common: 25, rare: 75, epic: 150, legendary: 300 };
         const points = pointValues[rarity];
         rewards.push({ type: 'points', value: points, rarity });
         
-        // Apply points immediately
         setStats(prev => ({ ...prev, totalPoints: prev.totalPoints + points }));
       } else if (rewardType < 0.8) {
-        // Stars reward
         const starValues = { common: 1, rare: 3, epic: 7, legendary: 15 };
         const stars = starValues[rarity];
         rewards.push({ type: 'stars', value: stars, rarity });
         
-        // Apply stars immediately
         setTelegramStars(prev => prev + stars);
       } else {
-        // Power-up reward
         const powerUps = [UPGRADE_IDS.SHIELD, UPGRADE_IDS.DOUBLE_POINTS];
         const powerUpId = powerUps[Math.floor(Math.random() * powerUps.length)];
         const powerUpName = upgrades.find(u => u.id === powerUpId)?.name || 'Power-up';
         rewards.push({ type: 'powerup', value: powerUpName, rarity });
         
-        // Activate power-up immediately
         activatePowerUp(powerUpId);
       }
     }
@@ -455,27 +221,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return rewards;
   };
 
-  const activatePowerUp = (powerUpId: string) => {
-    const upgrade = upgrades.find(u => u.id === powerUpId);
-    if (!upgrade || !upgrade.effectDuration) return;
-
-    const expiresAt = Date.now() + upgrade.effectDuration;
-    
-    setActivePowerUps(prev => [
-      ...prev.filter(p => p.id !== powerUpId), // Remove existing same power-up
-      {
-        id: powerUpId,
-        name: upgrade.name,
-        expiresAt,
-      }
-    ]);
-    showSuccess(`${upgrade.name} activated!`);
-  };
-
   const startGame = () => {
     console.log('Starting game with mode:', gameMode);
     setGameActive(true);
-    setCurrentPoints(0); // Reset current game points
+    setCurrentPoints(0);
     setPlayerSize(20);
     console.log('Game started - gameActive:', true, 'playerSize:', 20);
   };
@@ -483,13 +232,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const endGame = (finalScore: number) => {
     setGameActive(false);
     
-    // Calculate multipliers
     const permanentPointMultiplier = getPointMultiplier();
     const powerUpMultiplier = activePowerUps.find(p => p.id === UPGRADE_IDS.DOUBLE_POINTS) ? 2 : 1;
     
     finalizeGameStats(finalScore, permanentPointMultiplier, powerUpMultiplier);
 
-    // Update daily games challenge
     updateChallengeProgress(CHALLENGE_TYPES.DAILY_GAMES, 1);
   };
 
@@ -498,71 +245,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setPlayerSize(20);
   };
 
-  const updateChallengeProgress = (challengeType: string, value: number) => {
-    setChallenges(prev => 
-      prev.map(challenge => {
-        if (challenge.type === challengeType && !challenge.completed) {
-          const newValue = challenge.currentValue + value;
-          const completed = newValue >= challenge.targetValue;
-          
-          if (completed && !challenge.completed) {
-            // Auto-claim reward
-            // This now directly calls setStats from useGameStats, which updates the persistent storage
-            // and triggers re-renders for components consuming `stats`.
-            setStats(prevStats => ({ 
-              ...prevStats,
-              totalPoints: prevStats.totalPoints + challenge.reward,
-            }));
-            showSuccess(`Challenge Completed: ${challenge.name}! +${challenge.reward} points!`);
-          }
-          
-          return {
-            ...challenge,
-            currentValue: Math.min(newValue, challenge.targetValue),
-            completed,
-          };
-        }
-        return challenge;
-      })
-    );
-  };
-
-  const claimChallengeReward = (challengeId: string) => {
-    const challenge = challenges.find(c => c.id === challengeId);
-    if (!challenge || !challenge.completed) return;
-
-    // This now directly calls setStats from useGameStats, which updates the persistent storage
-    // and triggers re-renders for components consuming `stats`.
-    setStats(prev => ({ 
-      ...prev,
-      totalPoints: prev.totalPoints + challenge.reward,
-    }));
-  };
-
   const resetAllData = () => {
-    resetStats(); // Reset stats via useGameStats
-    setUpgrades(INITIAL_UPGRADES);
-    setChallenges(INITIAL_CHALLENGES);
-    updateSettings({}); // Reset settings via useGameSettings
+    resetStats();
+    resetProgression(); // Reset upgrades and challenges via useGameProgression
+    updateSettings({});
     setActivePowerUps([]);
     setTelegramStars(0);
     setDailyDeal(null);
     showSuccess('All game data reset!');
   };
-
-  // Helper function to get the highest active speed boost multiplier
-  const getSpeedBoostMultiplier = useCallback(() => {
-    const speedUpgrades = upgrades.filter(u => u.type === 'speed' && u.owned && u.effectValue !== undefined);
-    if (speedUpgrades.length === 0) return 0; // No speed boost
-    return Math.max(...speedUpgrades.map(u => u.effectValue!));
-  }, [upgrades]);
-
-  // Helper function to get the highest active point multiplier
-  const getPointMultiplier = useCallback(() => {
-    const multiplierUpgrades = upgrades.filter(u => u.type === 'multiplier' && u.owned && u.effectValue !== undefined);
-    if (multiplierUpgrades.length === 0) return 1; // Default 1x multiplier
-    return Math.max(...multiplierUpgrades.map(u => u.effectValue!));
-  }, [upgrades]);
 
   return (
     <GameContext.Provider value={{
