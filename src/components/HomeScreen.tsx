@@ -127,15 +127,15 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
             <Button
               key={mode.id}
               onClick={() => setGameMode(mode.id as any)}
-              className={`p-3 rounded-xl border transition-all duration-200 h-auto ${
+              className={`group p-3 rounded-xl border transition-all duration-200 h-auto flex flex-col items-center justify-center ${
                 gameMode === mode.id
                   ? 'bg-blue-500/30 border-blue-500/50 text-blue-200'
                   : 'bg-gray-800/30 border-gray-700/50 text-gray-300 hover:bg-gray-700/30'
               }`}
             >
-              <div className="text-lg mb-1">{mode.icon}</div>
-              <div className="text-xs font-semibold">{mode.name}</div>
-              <div className="text-xs opacity-75">{mode.desc}</div>
+              <div className="text-lg">{mode.icon}</div>
+              <div className="text-xs font-semibold mt-1">{mode.name}</div>
+              <div className="text-xs opacity-75 hidden group-hover:block text-center mt-1">{mode.desc}</div>
             </Button>
           ))}
         </div>
