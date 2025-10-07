@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { Star, Zap, FileX2 as X2, Skull, RotateCcw, ShoppingCart, Coins, ArrowLeft, CheckCircle, Shield, Heart, Palette } from 'lucide-react';
 import { Button } from './ui/button'; // Import Button
+import { showSuccess, showError } from '../utils/toast'; // Import toast utilities
 
 interface LootReward {
   type: 'points' | 'stars' | 'powerup' | 'cosmetic';
@@ -25,18 +26,33 @@ function Store({ onBack }: StoreProps) {
     if (results.length > 0) {
       setLootResults(results);
       setShowLootModal(true);
+      showSuccess(`Opened ${boxType.replace('_', ' ')}!`);
+    } else {
+      showError('Not enough Telegram Stars!');
     }
   };
 
   const handlePurchase = (upgradeId: string) => {
     const upgrade = upgrades.find(u => u.id === upgradeId);
-    if (!upgrade || stats.totalPoints < upgrade.price) return;
+    if (!upgrade) {
+      showError('Upgrade not found!');
+      return;
+    }
+    
+    if (stats.totalPoints < upgrade.price) {
+      showError('Not enough points!');
+      return;
+    }
     
     // For permanent upgrades, check if already owned
-    if (upgrade.category === 'permanent' && upgrade.owned) return;
+    if (upgrade.category === 'permanent' && upgrade.owned) {
+      showError('You already own this upgrade!');
+      return;
+    }
     
     purchaseUpgrade(upgradeId);
     setPurchaseAnimation(upgradeId);
+    showSuccess(`Purchased ${upgrade.name}!`);
     setTimeout(() => setPurchaseAnimation(null), 1000);
   };
 
@@ -44,17 +60,27 @@ function Store({ onBack }: StoreProps) {
     if (!dailyDeal) return;
     
     const dealUpgrade = upgrades.find(u => u.id === dailyDeal.upgradeId);
-    if (!dealUpgrade) return;
+    if (!dealUpgrade) {
+      showError('Daily deal upgrade not found!');
+      return;
+    }
     
     const discountedPrice = Math.floor(dealUpgrade.price * (1 - dailyDeal.discountPercent / 100));
     
-    if (stats.totalPoints < discountedPrice) return;
+    if (stats.totalPoints < discountedPrice) {
+      showError('Not enough points for the daily deal!');
+      return;
+    }
     
     // For permanent upgrades, check if already owned
-    if (dealUpgrade.category === 'permanent' && dealUpgrade.owned) return;
+    if (dealUpgrade.category === 'permanent' && dealUpgrade.owned) {
+      showError('You already own this daily deal upgrade!');
+      return;
+    }
     
     purchaseUpgrade(dailyDeal.upgradeId, discountedPrice);
     setPurchaseAnimation(dailyDeal.upgradeId);
+    showSuccess(`Purchased Daily Deal: ${dealUpgrade.name}!`);
     setTimeout(() => setPurchaseAnimation(null), 1000);
   };
 

@@ -3,6 +3,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { UPGRADE_IDS, CHALLENGE_TYPES } from '../constants/gameConstants';
 import { GameSettings } from '../types/gameTypes';
 import { FOOD_COLORS } from '../constants/gameConstants';
+import { showSuccess } from '../utils/toast'; // Import showSuccess
 
 interface GameStats {
   totalPoints: number;
@@ -361,6 +362,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         // Apply streak rewards
         const streakBonus = Math.min(updatedStats.loginStreak * 5, 50);
         updatedStats.totalPoints += streakBonus;
+        if (streakBonus > 0) {
+          showSuccess(`Login Streak! +${streakBonus} points!`);
+        }
       }
       
       setStats(updatedStats);
@@ -397,6 +401,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       // Handle utility purchases
       if (upgradeId === UPGRADE_IDS.EXTRA_LIVES) {
         refillLives();
+        showSuccess('Lives refilled!');
       }
     } else {
       // Permanent upgrades and cosmetics
@@ -434,6 +439,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     } else if (upgrade.category === 'utility') {
       if (upgradeId === UPGRADE_IDS.EXTRA_LIVES) {
         refillLives();
+        showSuccess('Lives refilled!');
       }
     } else {
       setUpgrades(prev => 
@@ -526,6 +532,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         expiresAt,
       }
     ]);
+    showSuccess(`${upgrade.name} activated!`);
   };
 
   const refillLives = () => {
@@ -590,6 +597,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               ...prevStats,
               totalPoints: prevStats.totalPoints + challenge.reward,
             }));
+            showSuccess(`Challenge Completed: ${challenge.name}! +${challenge.reward} points!`);
           }
           
           return {
@@ -621,10 +629,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setActivePowerUps([]);
     setTelegramStars(0);
     setDailyDeal(null);
+    showSuccess('All game data reset!');
   };
 
   const updateSettings = (newSettings: Partial<GameSettings>) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
+    showSuccess('Settings updated!');
   };
 
   // New helper function to get the highest active speed boost multiplier
