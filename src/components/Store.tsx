@@ -106,7 +106,7 @@ function Store({ onBack }: StoreProps) {
   ];
 
   return (
-    <div className="relative w-full h-full flex flex-col text-white max-w-sm mx-auto">
+    <div className="relative w-full h-full flex flex-col text-white mx-auto">
       {/* Header */}
       <div className="bg-gray-900/90 backdrop-blur-sm border-b border-gray-700/50 p-4">
         <div className="flex items-center gap-3">

@@ -68,7 +68,7 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col max-w-sm mx-auto">
+    <div className="relative w-full h-full flex flex-col mx-auto">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-10 left-10 w-20 h-20 bg-blue-500/20 rounded-full animate-pulse"></div>
