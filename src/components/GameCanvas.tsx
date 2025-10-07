@@ -128,10 +128,10 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      // Map mouse coordinates from actual canvas display size to game's logical viewport
       mouseRef.current = {
-        x: (e.clientX - rect.left) / dpr, // Adjust for DPR
-        y: (e.clientY - rect.top) / dpr, // Adjust for DPR
+        x: ((e.clientX - rect.left) / rect.width) * GAME_CONSTANTS.VIEWPORT_WIDTH,
+        y: ((e.clientY - rect.top) / rect.height) * GAME_CONSTANTS.VIEWPORT_HEIGHT,
       };
     };
 
@@ -780,11 +780,11 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const touch = e.touches[0];
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const dpr = window.devicePixelRatio || 1;
     
+    // Map touch coordinates from actual canvas display size to game's logical viewport
     mouseRef.current = {
-      x: (touch.clientX - rect.left) / dpr, // Adjust for DPR
-      y: (touch.clientY - rect.top) / dpr, // Adjust for DPR
+      x: ((touch.clientX - rect.left) / rect.width) * GAME_CONSTANTS.VIEWPORT_WIDTH,
+      y: ((touch.clientY - rect.top) / rect.height) * GAME_CONSTANTS.VIEWPORT_HEIGHT,
     };
   };
 
@@ -797,7 +797,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col max-w-sm mx-auto">
+    <div className="relative w-full h-full flex flex-col">
       {/* Game HUD */}
       <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex justify-between items-center text-white text-sm">
