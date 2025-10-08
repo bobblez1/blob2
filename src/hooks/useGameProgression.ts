@@ -198,7 +198,11 @@ const INITIAL_CHALLENGES: Challenge[] = [
   },
 ];
 
-export function useGameProgression(gameStatsSetter: GameStatsSetter, refillLives: () => void, activatePowerUp: (powerUpId: string) => void) {
+export function useGameProgression(
+  gameStatsSetter: GameStatsSetter, 
+  refillLives: () => void, 
+  activatePowerUp: (powerUpId: string, allUpgrades: Upgrade[]) => void // Updated signature
+) {
   const [upgrades, setUpgrades] = useLocalStorage<Upgrade[]>('agarGameUpgrades', INITIAL_UPGRADES);
   const [challenges, setChallenges] = useLocalStorage<Challenge[]>('agarGameChallenges', INITIAL_CHALLENGES);
 
@@ -208,7 +212,7 @@ export function useGameProgression(gameStatsSetter: GameStatsSetter, refillLives
     if (!upgrade || gameStatsSetter.stats.totalPoints < finalPrice) return;
 
     if (upgrade.category === 'powerup') {
-      activatePowerUp(upgradeId);
+      activatePowerUp(upgradeId, upgrades); // Pass current upgrades to activatePowerUp
     } else if (upgrade.category === 'utility') {
       if (upgradeId === UPGRADE_IDS.EXTRA_LIVES) {
         refillLives();
