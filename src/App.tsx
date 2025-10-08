@@ -4,16 +4,23 @@ import Dashboard from './components/Dashboard';
 import Store from './components/Store';
 import Settings from './components/Settings';
 import HomeScreen from './components/HomeScreen';
-import LobbyScreen from './components/LobbyScreen'; // Import LobbyScreen
-import GameRoomScreen from './components/GameRoomScreen'; // Import GameRoomScreen
+import LobbyScreen from './components/LobbyScreen';
+import GameRoomScreen from './components/GameRoomScreen';
 import { GameProvider } from './context/GameContext';
-import { useGame } from './context/GameContext'; // Import useGame to access currentRoom
+import { useGame } from './context/GameContext';
+import { SessionContextProvider, useSession } from './context/SessionContext'; // Import SessionContextProvider and useSession
 
 export type Screen = 'home' | 'game' | 'dashboard' | 'store' | 'settings' | 'lobby' | 'gameRoom';
 
-function AppContent() { // Renamed App to AppContent to use useGame hook
+function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-  const { currentRoom } = useGame(); // Access currentRoom from context
+  const { currentRoom } = useGame();
+  const { session, isLoading } = useSession(); // Use the session context
+
+  // If session is loading or not authenticated, SessionContextProvider will handle rendering Login
+  if (isLoading || !session) {
+    return null; // SessionContextProvider will render Login page
+  }
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -31,12 +38,12 @@ function AppContent() { // Renamed App to AppContent to use useGame hook
         return <GameRoomScreen onBackToLobby={() => setCurrentScreen('lobby')} onStartGame={() => setCurrentScreen('game')} />;
       default:
         return (
-          <HomeScreen 
+          <HomeScreen
             onPlay={() => setCurrentScreen('game')}
             onStore={() => setCurrentScreen('store')}
             onDashboard={() => setCurrentScreen('dashboard')}
             onSettings={() => setCurrentScreen('settings')}
-            onLobby={() => setCurrentScreen('lobby')} // New prop for LobbyScreen
+            onLobby={() => setCurrentScreen('lobby')}
           />
         );
     }
@@ -51,9 +58,11 @@ function AppContent() { // Renamed App to AppContent to use useGame hook
 
 function App() {
   return (
-    <GameProvider>
-      <AppContent />
-    </GameProvider>
+    <SessionContextProvider>
+      <GameProvider>
+        <AppContent />
+      </GameProvider>
+    </SessionContextProvider>
   );
 }
 
