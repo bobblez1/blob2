@@ -19,7 +19,7 @@ function GameRoomScreen({ onBackToLobby, onStartGame }: GameRoomScreenProps) {
     // Reset ready status when entering a new room
     setIsReady(false);
     setPlayerReady(false);
-  }, [currentRoom?.id, setPlayerReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentRoom?.id]); // Removed setPlayerReady from dependencies
 
   const handleLeaveRoom = async () => {
     await leaveRoom();

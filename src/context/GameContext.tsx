@@ -3,6 +3,7 @@ import { UPGRADE_IDS } from '../constants/gameConstants'; // Keep UPGRADE_IDS as
 import { GameSettings, Upgrade, Challenge, LootReward, ActivePowerUp, Room, RoomPlayer, RoomStatus } from '../types/gameTypes';
 import { showSuccess, showError } from '../utils/toast';
 import { supabase } from '../lib/supabase'; // Import Supabase client
+import { RealtimeChannel } from '@supabase/supabase-js'; // Import RealtimeChannel type
 
 // Import all custom hooks
 import { useGameSettings } from '../hooks/useGameSettings';
@@ -125,7 +126,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // --- Multiplayer State ---
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [playersInRoom, setPlayersInRoom] = useState<RoomPlayer[]>([]);
-  const playerChannelRef = useRef<any>(null); // Ref to store the Supabase Realtime channel
+  const playerChannelRef = useRef<RealtimeChannel | null>(null); // Ref to store the Supabase Realtime channel
 
   // Expose simplified purchase functions
   const purchaseUpgrade = useCallback((upgradeId: string, priceOverride?: number) => {
@@ -420,8 +421,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         playerChannelRef.current = null;
       }
     }
-  }, [currentRoom]);
-
+  }, [currentRoom]); // Removed setPlayerReady from dependencies
 
   // Global reset function
   const resetAllData = useCallback(() => {
