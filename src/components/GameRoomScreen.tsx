@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
-import { ArrowLeft, User, CheckCircle, XCircle, Play, Crown, Swords, Clock, Shield, Users } from 'lucide-react'; // Added Users icon
+import { ArrowLeft, User, CheckCircle, XCircle, Play, Crown, Swords, Clock, Shield, Users } from 'lucide-react';
 import { Button } from './ui/button';
 import { RoomPlayer } from '../types/gameTypes';
-import { GameMode } from '../hooks/useGameSession'; // Corrected import path for GameMode
+import { GameMode } from '../hooks/useGameSession';
 import { showError, showSuccess } from '../utils/toast';
 
 interface GameRoomScreenProps {

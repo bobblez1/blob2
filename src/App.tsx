@@ -7,8 +7,7 @@ import HomeScreen from './components/HomeScreen';
 import LobbyScreen from './components/LobbyScreen';
 import GameRoomScreen from './components/GameRoomScreen';
 import { GameProvider } from './context/GameContext';
-import { useGame } from './context/GameContext'; // Keep useGame as it's used for currentRoom
-import { SessionContextProvider, useSession } from './context/SessionContext'; // Import SessionContextProvider and useSession
+import { SessionContextProvider, useSession } from './context/SessionContext';
 
 export type Screen = 'home' | 'game' | 'dashboard' | 'store' | 'settings' | 'lobby' | 'gameRoom';
 

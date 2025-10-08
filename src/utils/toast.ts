@@ -23,14 +23,14 @@ export const dismissToast = (toastId: string) => {
 };
 
 export const updateToast = (toastId: string, message: string, type: 'success' | 'error' | 'loading' | 'blank') => {
-  toast.remove(toastId); // Remove existing toast
+  // Use toast.update for more efficient updates
   if (type === 'success') {
-    toast.success(message);
+    toast.success(message, { id: toastId });
   } else if (type === 'error') {
-    toast.error(message);
+    toast.error(message, { id: toastId });
   } else if (type === 'loading') {
-    toast.loading(message);
+    toast.loading(message, { id: toastId });
   } else {
-    toast(message);
+    toast(message, { id: toastId });
   }
 };

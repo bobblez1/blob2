@@ -4,8 +4,8 @@ import { GAME_CONSTANTS, FOOD_COLORS, UPGRADE_IDS, CHALLENGE_TYPES, TEAM_COLORS 
 import { PlayerBlob, BotBlob, FoodBlob, GameBlob } from '../types/gameTypes';
 import { calculateDistance, getEvolutionStage, getEvolutionColor, isInViewport, clampToCanvas, generateUniqueId, vibrate, playSound, createSpatialGrid, getNearbyBlobs } from '../utils/gameUtils';
 import { createBot, calculateBotAction } from '../utils/botAI';
-import { Play, Pause, RotateCcw, Heart, Home, Users } from 'lucide-react'; // Removed unused Zap, Shield, Star
-import { Button } from './ui/button'; // Import Button
+import { Play, Pause, RotateCcw, Heart, Home, Users } from 'lucide-react';
+import { Button } from './ui/button';
 
 interface GameCanvasProps {
   onGameEnd: () => void;
@@ -139,6 +139,20 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     return () => clearTimeout(timer);
   }, [gameMode, generateBots, generateFoods]);
 
+  const handleGameOver = useCallback(() => {
+    const revived = revivePlayer(); // Use the context's revivePlayer
+    
+    if (revived) {
+      setGameOver(false); // Game continues after revive
+      playSound('powerup', settings.soundEnabled);
+      vibrate(300, settings.vibrateEnabled);
+    } else {
+      setGameOver(true);
+      endGame(currentPoints); // Use the context's endGame
+      useLife(); // Use a life when game ends (if not auto-revived)
+    }
+  }, [revivePlayer, currentPoints, endGame, useLife, settings.soundEnabled, settings.vibrateEnabled]);
+
   // Game mode specific timers
   useEffect(() => {
     if (!gameActive || gameOver || isPaused) return;
@@ -160,7 +174,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [gameActive, gameOver, isPaused, gameMode, handleGameOver]); // Added handleGameOver to dependencies
+  }, [gameActive, gameOver, isPaused, gameMode, handleGameOver]);
 
   // Check for active shield power-up
   useEffect(() => {
@@ -251,46 +265,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [setIsPaused]); // Add setIsPaused to dependencies
+  }, [setIsPaused]);
 
-  // Game loop
-  useEffect(() => {
-    if (gameActive && !gameOver && !isPaused) {
-      const gameLoop = () => {
-        try {
-          updateGame();
-          draw();
-          animationRef.current = requestAnimationFrame(gameLoop);
-        } catch (error) {
-          console.error('Game loop error:', error);
-          setGameOver(true);
-        }
-      };
-      animationRef.current = requestAnimationFrame(gameLoop);
-    }
-    
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [gameActive, gameOver, isPaused, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic, generateBots, generateFoods, playerSize, player, camera, timeRemaining, playAreaRadius, handleGameOver, updateStats, updateChallengeProgress, growPlayer, selectedTeam, gameMode, settings.soundEnabled, settings.vibrateEnabled]); // Added all necessary dependencies
-
-  const handleGameOver = useCallback(() => {
-    const revived = revivePlayer(); // Use the context's revivePlayer
-    
-    if (revived) {
-      setGameOver(false); // Game continues after revive
-      playSound('powerup', settings.soundEnabled);
-      vibrate(300, settings.vibrateEnabled);
-    } else {
-      setGameOver(true);
-      endGame(currentPoints); // Use the context's endGame
-      useLife(); // Use a life when game ends (if not auto-revived)
-    }
-  }, [revivePlayer, currentPoints, endGame, useLife, settings.soundEnabled, settings.vibrateEnabled]);
-
-  const updateGame = () => {
+  const updateGame = useCallback(() => {
     // Access player state via ref
     const currentPlayer = playerRef.current;
 
@@ -577,42 +554,16 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     if (survivalTime >= 60) { // 1 minute survival
       updateChallengeProgress(CHALLENGE_TYPES.SURVIVE_TIME, Math.floor(survivalTime / 60));
     }
-  };
-
-  const handleRestart = () => {
-    if (stats.livesRemaining > 0) {
-      setGameOver(false);
-      setPlayer(prev => ({
-        ...prev,
-        x: GAME_CONSTANTS.CANVAS_WIDTH / 2,
-        y: GAME_CONSTANTS.CANVAS_HEIGHT / 2,
-        color: getPlayerColor(), // Ensure color is updated on restart
-        size: GAME_CONSTANTS.PLAYER_INITIAL_SIZE, // Reset size
-      }));
-      generateBots();
-      generateFoods();
-      gameStartTime.current = Date.now();
-      startGame(); // Use the context's startGame
-    }
-  };
-
-  const getBackgroundClass = useCallback(() => {
-    switch (settings.selectedBackgroundColor) {
-      case 'gradient':
-        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900';
-      case 'white':
-        return 'bg-white';
-      case 'grey':
-        return 'bg-gray-700';
-      case 'black':
-        return 'bg-black';
-      default:
-        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900'; // Default to gradient
-    }
-  }, [settings.selectedBackgroundColor]);
+  }, [
+    foods, bots, playerRef, growPlayer, getSpeedBoostMultiplier, canvasRef, keysRef, mouseRef,
+    setPlayer, setCamera, settings.soundEnabled, settings.vibrateEnabled, gameMode, selectedTeam,
+    timeRemaining, shieldActive, playAreaRadius, upgrades, getPointMultiplier, activePowerUps,
+    updateStats, updateChallengeProgress, handleGameOver, setFoods, setBots, setGameOver,
+    endGame, currentPoints, useLife
+  ]);
 
   // Helper drawing functions
-  const drawGrid = (ctx: CanvasRenderingContext2D) => {
+  const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
     const gridSize = GAME_CONSTANTS.GRID_SIZE;
@@ -630,9 +581,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.lineTo(GAME_CONSTANTS.VIEWPORT_WIDTH, y); // Corrected line to draw horizontally across viewport width
       ctx.stroke();
     }
-  };
+  }, [camera]);
 
-  const drawBattleRoyaleSafeZone = (ctx: CanvasRenderingContext2D) => {
+  const drawBattleRoyaleSafeZone = useCallback((ctx: CanvasRenderingContext2D) => {
     if (gameMode === 'battleRoyale') {
       const centerX = GAME_CONSTANTS.CANVAS_WIDTH / 2 - camera.x;
       const centerY = GAME_CONSTANTS.CANVAS_HEIGHT / 2 - camera.y;
@@ -658,9 +609,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.stroke();
       ctx.setLineDash([]);
     }
-  };
+  }, [gameMode, camera, playAreaRadius]);
 
-  const drawFoods = (ctx: CanvasRenderingContext2D) => {
+  const drawFoods = useCallback((ctx: CanvasRenderingContext2D) => {
     ctx.shadowBlur = 1;
     foods.forEach(food => {
       const screenX = food.x - camera.x;
@@ -675,9 +626,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       }
     });
     ctx.shadowBlur = 0;
-  };
+  }, [foods, camera]);
 
-  const drawBots = (ctx: CanvasRenderingContext2D) => {
+  const drawBots = useCallback((ctx: CanvasRenderingContext2D) => {
     bots.forEach(bot => {
       const screenX = bot.x - camera.x;
       const screenY = bot.y - camera.y;
@@ -703,9 +654,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         }
       }
     });
-  };
+  }, [bots, camera, gameMode]);
 
-  const drawPlayer = (ctx: CanvasRenderingContext2D) => {
+  const drawPlayer = useCallback((ctx: CanvasRenderingContext2D) => {
     const playerScreenX = player.x - camera.x;
     const playerScreenY = player.y - camera.y;
     const evolutionStage = getEvolutionStage(playerSize);
@@ -753,9 +704,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.fillStyle = getEvolutionColor(evolutionStage);
       ctx.fillText(evolutionStage.toUpperCase(), playerScreenX, playerScreenY - playerSize / 2 - 8);
     }
-  };
+  }, [player, playerSize, shieldActive, gameMode, selectedTeam, camera]);
 
-  const drawLeaderboard = (ctx: CanvasRenderingContext2D) => {
+  const drawLeaderboard = useCallback((ctx: CanvasRenderingContext2D) => {
     const playerBlob = { ...player, size: playerSize };
     const allBlobs = [playerBlob, ...bots].sort((a, b) => b.size - a.size).slice(0, 5);
     
@@ -778,9 +729,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.fillText(`${index + 1}. ${name} (${size})`, 15, y);
     });
     ctx.restore(); // Restore context after drawing leaderboard
-  };
+  }, [player, playerSize, bots]);
 
-  const drawPowerUpsIndicator = (ctx: CanvasRenderingContext2D) => {
+  const drawPowerUpsIndicator = useCallback((ctx: CanvasRenderingContext2D) => {
     ctx.save(); // Save context for power-ups indicator
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(GAME_CONSTANTS.VIEWPORT_WIDTH - 120, 10, 110, 30 + activePowerUps.length * 15);
@@ -798,9 +749,9 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.fillText(`${powerUp.name}: ${timeLeft}s`, GAME_CONSTANTS.VIEWPORT_WIDTH - 115, y);
     });
     ctx.restore(); // Restore context after drawing power-ups indicator
-  };
+  }, [activePowerUps]);
 
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -828,7 +779,65 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     if (activePowerUps.length > 0) {
       drawPowerUpsIndicator(ctx);
     }
+  }, [
+    drawGrid, drawBattleRoyaleSafeZone, drawFoods, drawBots, drawPlayer, drawLeaderboard, drawPowerUpsIndicator,
+    activePowerUps, canvasRef, renderParamsRef
+  ]);
+
+  // Game loop
+  useEffect(() => {
+    if (gameActive && !gameOver && !isPaused) {
+      const gameLoop = () => {
+        try {
+          updateGame();
+          draw();
+          animationRef.current = requestAnimationFrame(gameLoop);
+        } catch (error) {
+          console.error('Game loop error:', error);
+          setGameOver(true);
+        }
+      };
+      animationRef.current = requestAnimationFrame(gameLoop);
+    }
+    
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [gameActive, gameOver, isPaused, updateGame, draw]);
+
+  const handleRestart = () => {
+    if (stats.livesRemaining > 0) {
+      setGameOver(false);
+      setPlayer(prev => ({
+        ...prev,
+        x: GAME_CONSTANTS.CANVAS_WIDTH / 2,
+        y: GAME_CONSTANTS.CANVAS_HEIGHT / 2,
+        color: getPlayerColor(), // Ensure color is updated on restart
+        size: GAME_CONSTANTS.PLAYER_INITIAL_SIZE, // Reset size
+      }));
+      generateBots();
+      generateFoods();
+      gameStartTime.current = Date.now();
+      startGame(); // Use the context's startGame
+    }
   };
+
+  const getBackgroundClass = useCallback(() => {
+    switch (settings.selectedBackgroundColor) {
+      case 'gradient':
+        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900';
+      case 'white':
+        return 'bg-white';
+      case 'grey':
+        return 'bg-gray-700';
+      case 'black':
+        return 'bg-black';
+      default:
+        return 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900'; // Default to gradient
+    }
+  }, [settings.selectedBackgroundColor]);
 
   const handleTouch = (e: React.TouchEvent) => {
     e.preventDefault();

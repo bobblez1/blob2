@@ -421,7 +421,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         playerChannelRef.current = null;
       }
     }
-  }, [currentRoom]); // Removed setPlayerReady from dependencies
+  }, [currentRoom]);
 
   // Global reset function
   const resetAllData = useCallback(() => {
