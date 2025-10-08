@@ -83,6 +83,40 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     setPlayer(prev => ({ ...prev, color: getPlayerColor() }));
   }, [selectedCosmetic, upgrades, gameMode, selectedTeam, getPlayerColor]);
 
+  const generateBots = useCallback(() => {
+    const newBots: BotBlob[] = [];
+    
+    const botCount = gameMode === 'battleRoyale' ? 20 : gameMode === 'team' ? 10 : 15;
+    console.log('Generating', botCount, 'bots for mode:', gameMode);
+    
+    for (let i = 0; i < botCount; i++) {
+      const team = gameMode === 'team' ? (i % 2 === 0 ? 'red' : 'blue') : undefined;
+      newBots.push(createBot(gameMode, team));
+    }
+    console.log('Generated bots:', newBots.length);
+    setBots(newBots);
+  }, [gameMode]);
+
+  const generateFoods = useCallback(() => {
+    const newFoods: FoodBlob[] = [];
+    
+    for (let i = 0; i < GAME_CONSTANTS.FOOD_COUNT; i++) {
+      const foodColor = settings.foodColorMode === 'random' 
+        ? Object.values(FOOD_COLORS)[Math.floor(Math.random() * Object.values(FOOD_COLORS).length)]
+        : settings.selectedFoodColor;
+        
+      newFoods.push({
+        id: generateUniqueId(),
+        x: Math.random() * GAME_CONSTANTS.CANVAS_WIDTH,
+        y: Math.random() * GAME_CONSTANTS.CANVAS_HEIGHT,
+        size: GAME_CONSTANTS.FOOD_MIN_SIZE + Math.random() * (GAME_CONSTANTS.FOOD_MAX_SIZE - GAME_CONSTANTS.FOOD_MIN_SIZE),
+        color: foodColor,
+      });
+    }
+    console.log('Generated foods:', newFoods.length);
+    setFoods(newFoods);
+  }, [settings.foodColorMode, settings.selectedFoodColor]);
+
   // Initialize game
   useEffect(() => {
     console.log('Initializing game with mode:', gameMode);
@@ -95,7 +129,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     // Hide controls after 3 seconds
     const timer = setTimeout(() => setShowControls(false), 3000);
     return () => clearTimeout(timer);
-  }, [gameMode]);
+  }, [gameMode, generateBots, generateFoods]);
 
   // Game mode specific timers
   useEffect(() => {
@@ -233,40 +267,6 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       }
     };
   }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic, playerSize]); // Added playerSize to dependencies
-
-  const generateBots = () => {
-    const newBots: BotBlob[] = [];
-    
-    const botCount = gameMode === 'battleRoyale' ? 20 : gameMode === 'team' ? 10 : 15;
-    console.log('Generating', botCount, 'bots for mode:', gameMode);
-    
-    for (let i = 0; i < botCount; i++) {
-      const team = gameMode === 'team' ? (i % 2 === 0 ? 'red' : 'blue') : undefined;
-      newBots.push(createBot(gameMode, team));
-    }
-    console.log('Generated bots:', newBots.length);
-    setBots(newBots);
-  };
-
-  const generateFoods = () => {
-    const newFoods: FoodBlob[] = [];
-    
-    for (let i = 0; i < GAME_CONSTANTS.FOOD_COUNT; i++) {
-      const foodColor = settings.foodColorMode === 'random' 
-        ? Object.values(FOOD_COLORS)[Math.floor(Math.random() * Object.values(FOOD_COLORS).length)]
-        : settings.selectedFoodColor;
-        
-      newFoods.push({
-        id: generateUniqueId(),
-        x: Math.random() * GAME_CONSTANTS.CANVAS_WIDTH,
-        y: Math.random() * GAME_CONSTANTS.CANVAS_HEIGHT,
-        size: GAME_CONSTANTS.FOOD_MIN_SIZE + Math.random() * (GAME_CONSTANTS.FOOD_MAX_SIZE - GAME_CONSTANTS.FOOD_MIN_SIZE),
-        color: foodColor,
-      });
-    }
-    console.log('Generated foods:', newFoods.length);
-    setFoods(newFoods);
-  };
 
   const updateGame = () => {
     // Create mutable copies for processing
