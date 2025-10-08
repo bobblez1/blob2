@@ -4,7 +4,7 @@ import { GAME_CONSTANTS, FOOD_COLORS, UPGRADE_IDS, CHALLENGE_TYPES, TEAM_COLORS 
 import { PlayerBlob, BotBlob, FoodBlob, GameBlob } from '../types/gameTypes';
 import { calculateDistance, getEvolutionStage, getEvolutionColor, isInViewport, clampToCanvas, generateUniqueId, vibrate, playSound, createSpatialGrid, getNearbyBlobs } from '../utils/gameUtils';
 import { createBot, calculateBotAction } from '../utils/botAI';
-import { Play, Pause, RotateCcw, Heart, Home, Users } from 'lucide-react';
+import { Play, Pause, RotateCcw, Heart, Home } from 'lucide-react'; // Removed Users
 import { Button } from './ui/button';
 
 interface GameCanvasProps {
@@ -42,7 +42,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     getSpeedBoostMultiplier,
     getPointMultiplier,
     setIsPaused, // Now from context
-    resetPlayerSize, // Added resetPlayerSize from context
+    // Removed resetPlayerSize as it's not directly used here
   } = useGame();
   
   const [player, setPlayer] = useState<PlayerBlob>(() => ({
@@ -247,7 +247,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       keysRef.current.add(e.key.toLowerCase());
       if (e.key === ' ') {
         e.preventDefault();
-        setIsPaused((prev: boolean) => !prev); // Explicitly typed prev
+        setIsPaused(prev => !prev); // Corrected type usage
       }
     };
 
@@ -915,7 +915,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsPaused(!isPaused)}
+              onClick={() => setIsPaused(prev => !prev)}
               className="p-1.5 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
             >
               {isPaused ? <Play size={14} /> : <Pause size={14} />}

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { UPGRADE_IDS } from '../constants/gameConstants'; // Keep UPGRADE_IDS as it's used
 import { GameSettings, Upgrade, Challenge, LootReward, ActivePowerUp, Room, RoomPlayer, RoomStatus } from '../types/gameTypes';
 import { showSuccess, showError } from '../utils/toast';
 import { supabase } from '../lib/supabase'; // Import Supabase client
@@ -68,7 +67,7 @@ interface GameContextType {
   startGame: () => void;
   endGame: (finalScore: number) => void;
   revivePlayer: () => boolean; // Returns true if revived, false otherwise
-  setIsPaused: (paused: boolean) => void;
+  setIsPaused: React.Dispatch<React.SetStateAction<boolean>>; // Corrected type
 
   // From useGameSession
   gameMode: GameMode;

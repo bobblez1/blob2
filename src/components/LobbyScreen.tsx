@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
-import { ArrowLeft, PlusCircle, Users, Play, RefreshCw, Crown, Swords, Clock } from 'lucide-react'; // Removed unused Shield, CheckCircle
+import { ArrowLeft, PlusCircle, Users, Play, RefreshCw, Crown, Swords, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -12,10 +12,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './ui/dialog';
-import { Room } from '../types/gameTypes'; // Removed unused RoomPlayer, RoomStatus
-import { GameMode, Team } from '../hooks/useGameSession';
+import { Room } from '../types/gameTypes';
+import { GameMode } from '../hooks/useGameSession'; // Removed Team
 import { supabase } from '../lib/supabase';
-import { showError } from '../utils/toast'; // Removed unused showSuccess
+import { showError } from '../utils/toast';
 
 interface LobbyScreenProps {
   onBack: () => void;
@@ -23,7 +23,7 @@ interface LobbyScreenProps {
 }
 
 function LobbyScreen({ onBack, onJoinGameRoom }: LobbyScreenProps) {
-  const { createRoom, joinRoom, setGameMode, setSelectedTeam, gameMode, selectedTeam } = useGame(); // Removed unused stats, currentRoom
+  const { createRoom, joinRoom, setGameMode, setSelectedTeam, gameMode, selectedTeam } = useGame();
   const [roomName, setRoomName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);

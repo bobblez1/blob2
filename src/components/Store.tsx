@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { Star, FileX2 as X2, Skull, RotateCcw, ShoppingCart, Coins, ArrowLeft, CheckCircle, Shield, Heart, Palette } from 'lucide-react'; // Removed unused Zap
+import { Star, FileX2 as X2, Skull, RotateCcw, ShoppingCart, Coins, ArrowLeft, CheckCircle, Shield, Heart, Palette, Zap } from 'lucide-react'; // Added Zap
 import { Button } from './ui/button'; // Import Button
 import { showSuccess, showError } from '../utils/toast'; // Import toast utilities
 
