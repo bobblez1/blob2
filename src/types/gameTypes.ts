@@ -72,16 +72,51 @@ export interface ActivePowerUp {
   expiresAt: number;
 }
 
-interface DailyDeal {
+export interface DailyDeal {
   upgradeId: string;
   discountPercent: number;
   expiresAt: string;
 }
 
-interface LootReward {
+export interface LootReward {
   type: 'points' | 'stars' | 'powerup' | 'cosmetic';
   value: number | string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
 export type EvolutionStage = 'basic' | 'common' | 'rare' | 'epic' | 'legendary';
+
+// --- New Multiplayer Types ---
+export type RoomStatus = 'waiting' | 'in_game' | 'finished';
+
+export interface Room {
+  id: string;
+  name: string;
+  status: RoomStatus;
+  max_players: number;
+  current_players_count: number;
+  host_id: string;
+  game_mode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team';
+  selected_team?: 'red' | 'blue'; // Host's selected team for team mode
+  created_at: string;
+}
+
+export interface RoomPlayer {
+  id: string; // This will be the player's unique ID (e.g., from useGameStats)
+  room_id: string;
+  player_name: string;
+  team?: 'red' | 'blue';
+  is_ready: boolean;
+  joined_at: string;
+}
+
+// This interface will be used for the server-authoritative game state
+export interface GameState {
+  room_id: string;
+  players_data: PlayerBlob[]; // Array of all player blobs in the game
+  bots_data: BotBlob[];     // Array of all bot blobs
+  foods_data: FoodBlob[];   // Array of all food blobs
+  game_time: number;        // Current game time (e.g., for time attack)
+  play_area_radius: number; // Current play area radius (for battle royale)
+  last_updated_at: string;
+}
