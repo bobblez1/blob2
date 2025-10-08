@@ -4,12 +4,16 @@ import Dashboard from './components/Dashboard';
 import Store from './components/Store';
 import Settings from './components/Settings';
 import HomeScreen from './components/HomeScreen';
+import LobbyScreen from './components/LobbyScreen'; // Import LobbyScreen
+import GameRoomScreen from './components/GameRoomScreen'; // Import GameRoomScreen
 import { GameProvider } from './context/GameContext';
+import { useGame } from './context/GameContext'; // Import useGame to access currentRoom
 
-export type Screen = 'home' | 'game' | 'dashboard' | 'store' | 'settings';
+export type Screen = 'home' | 'game' | 'dashboard' | 'store' | 'settings' | 'lobby' | 'gameRoom';
 
-function App() {
+function AppContent() { // Renamed App to AppContent to use useGame hook
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+  const { currentRoom } = useGame(); // Access currentRoom from context
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -21,6 +25,10 @@ function App() {
         return <Store onBack={() => setCurrentScreen('home')} />;
       case 'settings':
         return <Settings onBack={() => setCurrentScreen('home')} />;
+      case 'lobby':
+        return <LobbyScreen onBack={() => setCurrentScreen('home')} onJoinGameRoom={() => setCurrentScreen('gameRoom')} />;
+      case 'gameRoom':
+        return <GameRoomScreen onBackToLobby={() => setCurrentScreen('lobby')} onStartGame={() => setCurrentScreen('game')} />;
       default:
         return (
           <HomeScreen 
@@ -28,16 +36,23 @@ function App() {
             onStore={() => setCurrentScreen('store')}
             onDashboard={() => setCurrentScreen('dashboard')}
             onSettings={() => setCurrentScreen('settings')}
+            onLobby={() => setCurrentScreen('lobby')} // New prop for LobbyScreen
           />
         );
     }
   };
 
   return (
+    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+      {renderScreen()}
+    </div>
+  );
+}
+
+function App() {
+  return (
     <GameProvider>
-      <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900"> {/* Re-added bg-gradient-to-br classes */}
-        {renderScreen()}
-      </div>
+      <AppContent />
     </GameProvider>
   );
 }

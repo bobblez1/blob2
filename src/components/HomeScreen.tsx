@@ -10,20 +10,24 @@ import {
   Trophy,
   Zap,
   Target,
-  Crown
+  Crown,
+  Users // Import Users icon for multiplayer
 } from 'lucide-react';
-import { Button } from './ui/button'; // Import the new Button component
-import AnimatedBackground from './AnimatedBackground'; // Import the new AnimatedBackground component
-import { GameMode, Team } from '../hooks/useGameSession'; // Import types
+import { Button } from './ui/button';
+import AnimatedBackground from './AnimatedBackground';
+import { GameMode, Team } from '../hooks/useGameSession';
+
+export type Screen = 'home' | 'game' | 'dashboard' | 'store' | 'settings' | 'lobby' | 'gameRoom'; // Update Screen type
 
 interface HomeScreenProps {
   onPlay: () => void;
   onStore: () => void;
   onDashboard: () => void;
   onSettings: () => void;
+  onLobby: () => void; // New prop for navigating to lobby
 }
 
-function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProps) {
+function HomeScreen({ onPlay, onStore, onDashboard, onSettings, onLobby }: HomeScreenProps) {
   const { stats, upgrades, gameMode, setGameMode, selectedTeam, setSelectedTeam } = useGame();
   const [animatedPoints, setAnimatedPoints] = useState(0);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -281,8 +285,19 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
           <div className="flex items-center justify-center gap-3">
             <Play size={24} />
             <span>
-              {stats.livesRemaining > 0 ? 'PLAY NOW' : 'NO LIVES LEFT'}
+              {stats.livesRemaining > 0 ? 'PLAY NOW (Single Player)' : 'NO LIVES LEFT'}
             </span>
+          </div>
+        </Button>
+
+        {/* Multiplayer Button */}
+        <Button
+          onClick={onLobby}
+          className="w-full py-4 px-8 rounded-2xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 bg-purple-500 hover:bg-purple-600 text-white text-xl font-bold"
+        >
+          <div className="flex items-center justify-center gap-3">
+            <Users size={24} />
+            <span>MULTIPLAYER</span>
           </div>
         </Button>
 
