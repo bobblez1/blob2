@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ActivePowerUp, Upgrade } from '../types/gameTypes';
 import { showSuccess } from '../utils/toast';
 
-export function useActivePowerUps(allUpgrades: Upgrade[]) {
+export function useActivePowerUps() { // Removed allUpgrades from hook parameter
   const [activePowerUps, setActivePowerUps] = useState<ActivePowerUp[]>([]);
 
   // Clean up expired power-ups
@@ -15,7 +15,8 @@ export function useActivePowerUps(allUpgrades: Upgrade[]) {
     return () => clearInterval(interval);
   }, []);
 
-  const activatePowerUp = useCallback((powerUpId: string) => {
+  // activatePowerUp now takes allUpgrades as a parameter when called
+  const activatePowerUp = useCallback((powerUpId: string, allUpgrades: Upgrade[]) => {
     const upgrade = allUpgrades.find(u => u.id === powerUpId);
     if (!upgrade || !upgrade.effectDuration) return;
 
@@ -30,7 +31,7 @@ export function useActivePowerUps(allUpgrades: Upgrade[]) {
       }
     ]);
     showSuccess(`${upgrade.name} activated!`);
-  }, [allUpgrades]);
+  }, []); // No dependency on allUpgrades here, as it's passed directly
 
   const resetActivePowerUps = useCallback(() => {
     setActivePowerUps([]);

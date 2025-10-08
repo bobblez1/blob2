@@ -1,15 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { UPGRADE_IDS, CHALLENGE_TYPES } from '../constants/gameConstants';
-import { GameSettings, Upgrade, Challenge, LootReward, ActivePowerUp } from '../types/gameTypes'; // Import ActivePowerUp
-import { FOOD_COLORS } from '../constants/gameConstants';
+import { GameSettings, Upgrade, Challenge, LootReward, ActivePowerUp } from '../types/gameTypes';
 import { showSuccess } from '../utils/toast';
-import { generateUniqueId } from '../utils/gameUtils';
+
+// Import all custom hooks
 import { useGameSettings } from '../hooks/useGameSettings';
 import { useGameStats } from '../hooks/useGameStats';
-import { useGameProgression } from '../hooks/useGameProgression';
+import { useUpgrades } from '../hooks/useUpgrades'; // Renamed from useGameProgression
 import { useGameEconomy } from '../hooks/useGameEconomy';
-import { useActivePowerUps } from '../hooks/useActivePowerUps'; // Import the new hook
+import { useActivePowerUps } from '../hooks/useActivePowerUps';
+import { usePlayer } from '../hooks/usePlayer'; // New hook
+import { useGameLifecycle } from '../hooks/useGameLifecycle'; // New hook
+import { useChallenges } from '../hooks/useChallenges'; // New hook
+import { useGameSession, GameMode, Team } from '../hooks/useGameSession'; // New hook
 
 interface DailyDeal {
   upgradeId: string;
@@ -18,165 +21,165 @@ interface DailyDeal {
 }
 
 interface GameContextType {
+  // From useGameStats
   stats: ReturnType<typeof useGameStats>['stats'];
-  upgrades: Upgrade[];
-  challenges: Challenge[];
-  activePowerUps: ActivePowerUp[];
-  settings: GameSettings;
-  dailyDeal: DailyDeal | null;
-  selectedCosmetic: string | null;
   currentPoints: number;
-  gameActive: boolean;
-  playerSize: number;
-  gameMode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team';
-  selectedTeam: 'red' | 'blue';
-  telegramStars: number;
   updateStats: ReturnType<typeof useGameStats>['updateStats'];
-  growPlayer: (amount: number) => void;
-  purchaseUpgrade: (upgradeId: string, priceOverride?: number) => void;
-  purchaseWithStars: (upgradeId: string) => void;
-  openLootBox: (boxType: string) => LootReward[];
-  startGame: (mode?: 'classic' | 'timeAttack' | 'battleRoyale' | 'team') => void;
-  endGame: (finalScore: number) => void;
   useLife: ReturnType<typeof useGameStats>['useLife'];
-  revivePlayer: () => void;
-  resetAllData: () => void;
-  updateChallengeProgress: (challengeType: string, value: number) => void;
-  claimChallengeReward: (challengeId: string) => void;
-  activatePowerUp: (powerUpId: string) => void; // Updated signature
   refillLives: ReturnType<typeof useGameStats>['refillLives'];
-  setGameMode: (mode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team') => void;
-  setSelectedTeam: (team: 'red' | 'blue') => void;
-  setSelectedCosmetic: (cosmeticId: string | null) => void;
-  updateSettings: (settings: Partial<GameSettings>) => void;
+
+  // From useUpgrades
+  upgrades: Upgrade[];
+  purchaseUpgrade: (upgradeId: string, priceOverride?: number) => void;
   getSpeedBoostMultiplier: () => number;
   getPointMultiplier: () => number;
+
+  // From useChallenges
+  challenges: Challenge[];
+  updateChallengeProgress: (challengeType: string, value: number) => void;
+  claimChallengeReward: (challengeId: string) => void;
+
+  // From useActivePowerUps
+  activePowerUps: ActivePowerUp[];
+  activatePowerUp: (powerUpId: string) => void;
+
+  // From useGameSettings
+  settings: GameSettings;
+  updateSettings: (settings: Partial<GameSettings>) => void;
+  selectedCosmetic: string | null;
+  setSelectedCosmetic: (cosmeticId: string | null) => void;
+
+  // From useGameEconomy
+  dailyDeal: DailyDeal | null;
+  telegramStars: number;
+  purchaseWithStars: (upgradeId: string) => void;
+  openLootBox: (boxType: string) => LootReward[];
+
+  // From usePlayer
+  playerSize: number;
+  growPlayer: (amount: number) => void;
+
+  // From useGameLifecycle
+  gameActive: boolean;
+  isPaused: boolean;
+  startGame: () => void;
+  endGame: (finalScore: number) => void;
+  revivePlayer: () => boolean; // Returns true if revived, false otherwise
+  setIsPaused: (paused: boolean) => void;
+
+  // From useGameSession
+  gameMode: GameMode;
+  setGameMode: (mode: GameMode) => void;
+  selectedTeam: Team;
+  setSelectedTeam: (team: Team) => void;
+
+  // Global reset
+  resetAllData: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
+  // Core Game State Hooks
   const { stats, setStats, currentPoints, setCurrentPoints, updateStats, finalizeGameStats, useLife, refillLives, resetStats } = useGameStats();
-  const { settings, updateSettings } = useGameSettings();
-  const [selectedCosmetic, setSelectedCosmetic] = useLocalStorage<string | null>('agarSelectedCosmetic', null);
-  const [gameActive, setGameActive] = useState(false);
-  const [playerSize, setPlayerSize] = useState(20);
-  const [gameMode, setGameMode] = useState<'classic' | 'timeAttack' | 'battleRoyale' | 'team'>('classic');
-  const [selectedTeam, setSelectedTeam] = useState<'red' | 'blue'>('red');
+  const { settings, updateSettings, selectedCosmetic, setSelectedCosmetic, resetSettings } = useGameSettings();
+  const { playerSize, setPlayerSize, growPlayer, resetPlayerSize } = usePlayer();
+  const { gameMode, setGameMode, selectedTeam, setSelectedTeam, resetGameSession } = useGameSession();
 
-  const {
-    upgrades,
-    challenges,
-    purchaseUpgrade: progressionPurchaseUpgrade, // Renamed to avoid conflict
-    updateChallengeProgress,
-    claimChallengeReward,
-    resetProgression,
-    getSpeedBoostMultiplier,
-    getPointMultiplier,
-  } = useGameProgression({ stats, setStats }, refillLives, (powerUpId: string) => activatePowerUp(powerUpId)); // Pass activatePowerUp here.
-
-  const { activePowerUps, activatePowerUp, resetActivePowerUps } = useActivePowerUps(upgrades); // Use the new hook
-
-  const {
-    telegramStars,
-    dailyDeal,
-    purchaseWithStars: economyPurchaseWithStars,
-    openLootBox: economyOpenLootBox,
-    resetEconomy,
-  } = useGameEconomy(
+  // Progression & Economy Hooks (depend on core state)
+  const { activePowerUps, activatePowerUp, resetActivePowerUps } = useActivePowerUps(); // No longer needs upgrades as a prop
+  const { upgrades, purchaseUpgrade: progressionPurchaseUpgrade, resetUpgrades, getSpeedBoostMultiplier, getPointMultiplier } = useUpgrades(
+    { stats, setStats },
+    { activatePowerUp, refillLives }
+  );
+  const { challenges, updateChallengeProgress, claimChallengeReward, resetChallenges } = useChallenges({ setStats });
+  const { telegramStars, dailyDeal, purchaseWithStars: economyPurchaseWithStars, openLootBox: economyOpenLootBox, resetEconomy } = useGameEconomy(
     { setStats },
     { upgrades, purchaseUpgrade: progressionPurchaseUpgrade },
     { activatePowerUp }
   );
-  
-  const growPlayer = (amount: number) => {
-    setPlayerSize(prev => Math.max(5, prev + amount));
-  };
 
-  // Wrapper for progressionPurchaseUpgrade
+  // Game Lifecycle Hook (depends on multiple hooks)
+  const { gameActive, setGameActive, isPaused, setIsPaused, startGame, endGame, revivePlayer } = useGameLifecycle({
+    setCurrentPoints,
+    finalizeGameStats,
+    useLife,
+    resetPlayerSize,
+    resetActivePowerUps,
+    updateChallengeProgress,
+    getPointMultiplier,
+    activePowerUps,
+    upgrades, // Pass upgrades to check for AUTO_REVIVE
+  });
+  
+  // Expose simplified purchase functions
   const purchaseUpgrade = useCallback((upgradeId: string, priceOverride?: number) => {
     progressionPurchaseUpgrade(upgradeId, priceOverride);
   }, [progressionPurchaseUpgrade]);
 
-  // Wrapper for economyPurchaseWithStars
   const purchaseWithStars = useCallback((upgradeId: string) => {
     economyPurchaseWithStars(upgradeId);
   }, [economyPurchaseWithStars]);
 
-  // Wrapper for economyOpenLootBox
   const openLootBox = useCallback((boxType: string): LootReward[] => {
     return economyOpenLootBox(boxType);
   }, [economyOpenLootBox]);
 
-  const startGame = () => {
-    console.log('Starting game with mode:', gameMode);
-    setGameActive(true);
-    setCurrentPoints(0);
-    setPlayerSize(20);
-    console.log('Game started - gameActive:', true, 'playerSize:', 20);
-  };
-
-  const endGame = (finalScore: number) => {
-    setGameActive(false);
-    
-    const permanentPointMultiplier = getPointMultiplier();
-    const powerUpMultiplier = activePowerUps.find(p => p.id === UPGRADE_IDS.DOUBLE_POINTS) ? 2 : 1;
-    
-    finalizeGameStats(finalScore, permanentPointMultiplier, powerUpMultiplier);
-
-    updateChallengeProgress(CHALLENGE_TYPES.DAILY_GAMES, 1);
-  };
-
-  const revivePlayer = () => {
-    setGameActive(true);
-    setPlayerSize(20);
-  };
-
-  const resetAllData = () => {
+  // Global reset function
+  const resetAllData = useCallback(() => {
     resetStats();
-    resetProgression();
+    resetUpgrades();
+    resetChallenges();
     resetEconomy();
-    resetActivePowerUps(); // Reset active power-ups
-    updateSettings({});
-    setSelectedCosmetic(null);
+    resetActivePowerUps();
+    resetSettings();
+    resetPlayerSize();
+    resetGameSession();
+    setGameActive(false);
+    setIsPaused(false);
     showSuccess('All game data reset!');
-  };
+  }, [
+    resetStats, resetUpgrades, resetChallenges, resetEconomy, resetActivePowerUps,
+    resetSettings, resetPlayerSize, resetGameSession, setGameActive, setIsPaused
+  ]);
 
   return (
     <GameContext.Provider value={{
       stats,
-      upgrades,
-      challenges,
-      activePowerUps,
-      settings,
-      dailyDeal,
-      selectedCosmetic,
       currentPoints,
-      gameActive,
-      playerSize,
-      gameMode,
-      selectedTeam,
-      telegramStars,
       updateStats,
-      purchaseUpgrade,
-      purchaseWithStars,
-      openLootBox,
-      startGame,
-      endGame,
       useLife,
-      revivePlayer,
-      resetAllData,
-      updateChallengeProgress,
-      claimChallengeReward,
-      activatePowerUp,
       refillLives,
-      setGameMode,
-      setSelectedTeam,
-      setSelectedCosmetic,
-      growPlayer,
-      updateSettings,
+      upgrades,
+      purchaseUpgrade,
       getSpeedBoostMultiplier,
       getPointMultiplier,
+      challenges,
+      updateChallengeProgress,
+      claimChallengeReward,
+      activePowerUps,
+      activatePowerUp,
+      settings,
+      updateSettings,
+      selectedCosmetic,
+      setSelectedCosmetic,
+      dailyDeal,
+      telegramStars,
+      purchaseWithStars,
+      openLootBox,
+      playerSize,
+      growPlayer,
+      gameActive,
+      isPaused,
+      startGame,
+      endGame,
+      revivePlayer,
+      setIsPaused,
+      gameMode,
+      setGameMode,
+      selectedTeam,
+      setSelectedTeam,
+      resetAllData,
     }}>
       {children}
     </GameContext.Provider>

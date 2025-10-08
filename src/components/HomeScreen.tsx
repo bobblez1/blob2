@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button'; // Import the new Button component
 import AnimatedBackground from './AnimatedBackground'; // Import the new AnimatedBackground component
+import { GameMode, Team } from '../hooks/useGameSession'; // Import types
 
 interface HomeScreenProps {
   onPlay: () => void;
@@ -126,7 +127,7 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
           ].map(mode => (
             <Button
               key={mode.id}
-              onClick={() => setGameMode(mode.id as any)}
+              onClick={() => setGameMode(mode.id as GameMode)}
               className={`group p-3 rounded-xl border transition-all duration-200 h-auto flex flex-col items-center justify-center ${
                 gameMode === mode.id
                   ? 'bg-blue-500/30 border-blue-500/50 text-blue-200'
@@ -145,7 +146,7 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
             <p className="text-gray-400 text-xs mb-2">Select your team:</p>
             <div className="flex gap-2">
               <Button
-                onClick={() => setSelectedTeam('red')}
+                onClick={() => setSelectedTeam('red' as Team)}
                 className={`flex-1 p-2 rounded-lg border transition-all h-auto ${
                   selectedTeam === 'red'
                     ? 'bg-red-500/30 border-red-500/50 text-red-200'
@@ -155,7 +156,7 @@ function HomeScreen({ onPlay, onStore, onDashboard, onSettings }: HomeScreenProp
                 🔴 Red Team
               </Button>
               <Button
-                onClick={() => setSelectedTeam('blue')}
+                onClick={() => setSelectedTeam('blue' as Team)}
                 className={`flex-1 p-2 rounded-lg border transition-all h-auto ${
                   selectedTeam === 'blue'
                     ? 'bg-blue-500/30 border-blue-500/50 text-blue-200'

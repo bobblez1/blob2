@@ -1,12 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import { UPGRADE_IDS, CHALLENGE_TYPES } from '../constants/gameConstants';
-import { Upgrade, Challenge } from '../types/gameTypes';
+import { UPGRADE_IDS } from '../constants/gameConstants';
+import { Upgrade } from '../types/gameTypes';
 import { showSuccess } from '../utils/toast';
 
 interface GameStatsSetter {
   setStats: (updater: (prevStats: any) => any) => void;
   stats: { totalPoints: number };
+}
+
+interface GameContextActions {
+  activatePowerUp: (powerUpId: string) => void;
+  refillLives: () => void;
 }
 
 const INITIAL_UPGRADES: Upgrade[] = [
@@ -155,56 +160,12 @@ const INITIAL_UPGRADES: Upgrade[] = [
   },
 ];
 
-const INITIAL_CHALLENGES: Challenge[] = [
-  {
-    id: 'eat_10_blobs',
-    name: 'Blob Hunter',
-    description: 'Eat 10 blobs in total',
-    targetValue: 10,
-    currentValue: 0,
-    completed: false,
-    reward: 25,
-    type: CHALLENGE_TYPES.EAT_BLOBS,
-  },
-  {
-    id: 'eat_50_blobs',
-    name: 'Blob Master',
-    description: 'Eat 50 blobs in total',
-    targetValue: 50,
-    currentValue: 0,
-    completed: false,
-    reward: 100,
-    type: CHALLENGE_TYPES.EAT_BLOBS,
-  },
-  {
-    id: 'survive_5_minutes',
-    name: 'Survivor',
-    description: 'Survive for 5 minutes in a single game',
-    targetValue: 5,
-    currentValue: 0,
-    completed: false,
-    reward: 50,
-    type: CHALLENGE_TYPES.SURVIVE_TIME,
-  },
-  {
-    id: 'play_daily',
-    name: 'Daily Player',
-    description: 'Play 5 games in one day',
-    targetValue: 5,
-    currentValue: 0,
-    completed: false,
-    reward: 30,
-    type: CHALLENGE_TYPES.DAILY_GAMES,
-  },
-];
-
-export function useGameProgression(
+export function useUpgrades(
   gameStatsSetter: GameStatsSetter, 
-  refillLives: () => void, 
-  activatePowerUp: (powerUpId: string, allUpgrades: Upgrade[]) => void // Updated signature
+  gameContextActions: GameContextActions
 ) {
   const [upgrades, setUpgrades] = useLocalStorage<Upgrade[]>('agarGameUpgrades', INITIAL_UPGRADES);
-  const [challenges, setChallenges] = useLocalStorage<Challenge[]>('agarGameChallenges', INITIAL_CHALLENGES);
+  const { activatePowerUp, refillLives } = gameContextActions;
 
   const purchaseUpgrade = useCallback((upgradeId: string, priceOverride?: number) => {
     const upgrade = upgrades.find(u => u.id === upgradeId);
@@ -212,7 +173,7 @@ export function useGameProgression(
     if (!upgrade || gameStatsSetter.stats.totalPoints < finalPrice) return;
 
     if (upgrade.category === 'powerup') {
-      activatePowerUp(upgradeId, upgrades); // Pass current upgrades to activatePowerUp
+      activatePowerUp(upgradeId);
     } else if (upgrade.category === 'utility') {
       if (upgradeId === UPGRADE_IDS.EXTRA_LIVES) {
         refillLives();
@@ -230,48 +191,11 @@ export function useGameProgression(
       ...prev,
       totalPoints: prev.totalPoints - finalPrice,
     }));
-  }, [upgrades, gameStatsSetter, refillLives, activatePowerUp]);
+  }, [upgrades, gameStatsSetter, activatePowerUp, refillLives]);
 
-  const updateChallengeProgress = useCallback((challengeType: string, value: number) => {
-    setChallenges(prev => 
-      prev.map(challenge => {
-        if (challenge.type === challengeType && !challenge.completed) {
-          const newValue = challenge.currentValue + value;
-          const completed = newValue >= challenge.targetValue;
-          
-          if (completed && !challenge.completed) {
-            gameStatsSetter.setStats(prevStats => ({ 
-              ...prevStats,
-              totalPoints: prevStats.totalPoints + challenge.reward,
-            }));
-            showSuccess(`Challenge Completed: ${challenge.name}! +${challenge.reward} points!`);
-          }
-          
-          return {
-            ...challenge,
-            currentValue: Math.min(newValue, challenge.targetValue),
-            completed,
-          };
-        }
-        return challenge;
-      })
-    );
-  }, [gameStatsSetter]);
-
-  const claimChallengeReward = useCallback((challengeId: string) => {
-    const challenge = challenges.find(c => c.id === challengeId);
-    if (!challenge || !challenge.completed) return;
-
-    gameStatsSetter.setStats(prev => ({ 
-      ...prev,
-      totalPoints: prev.totalPoints + challenge.reward,
-    }));
-  }, [challenges, gameStatsSetter]);
-
-  const resetProgression = useCallback(() => {
+  const resetUpgrades = useCallback(() => {
     setUpgrades(INITIAL_UPGRADES);
-    setChallenges(INITIAL_CHALLENGES);
-  }, [setUpgrades, setChallenges]);
+  }, [setUpgrades]);
 
   const getSpeedBoostMultiplier = useCallback(() => {
     const speedUpgrades = upgrades.filter(u => u.type === 'speed' && u.owned && u.effectValue !== undefined);
@@ -287,11 +211,8 @@ export function useGameProgression(
 
   return {
     upgrades,
-    challenges,
     purchaseUpgrade,
-    updateChallengeProgress,
-    claimChallengeReward,
-    resetProgression,
+    resetUpgrades,
     getSpeedBoostMultiplier,
     getPointMultiplier,
   };

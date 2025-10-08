@@ -23,7 +23,6 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   const { 
     stats, 
     upgrades, 
-    challenges,
     activePowerUps,
     settings,
     gameMode,
@@ -32,16 +31,17 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     currentPoints, 
     playerSize,
     gameActive, 
+    isPaused,
     startGame, 
     endGame, 
     useLife, 
     revivePlayer,
     updateStats,
     updateChallengeProgress,
-    activatePowerUp,
     growPlayer,
     getSpeedBoostMultiplier,
-    getPointMultiplier       
+    getPointMultiplier,
+    setIsPaused, // Now from context
   } = useGame();
   
   const [player, setPlayer] = useState<PlayerBlob>(() => ({
@@ -58,7 +58,6 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   const [foods, setFoods] = useState<FoodBlob[]>([]);
   const [camera, setCamera] = useState({ x: 0, y: 0 });
   const [gameOver, setGameOver] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [shieldActive, setShieldActive] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(GAME_CONSTANTS.TIME_ATTACK_DURATION);
@@ -210,7 +209,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [setIsPaused]); // Add setIsPaused to dependencies
 
   // Game loop
   useEffect(() => {
@@ -233,7 +232,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic]);
+  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic, playerSize]); // Added playerSize to dependencies
 
   const generateBots = () => {
     const newBots: BotBlob[] = [];
@@ -562,19 +561,16 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   };
 
   const handleGameOver = () => {
-    const hasAutoRevive = upgrades.find(u => u.id === UPGRADE_IDS.AUTO_REVIVE && u.owned);
+    const revived = revivePlayer(); // Use the context's revivePlayer
     
-    if (hasAutoRevive) {
-      revivePlayer();
-      setPlayer(prev => ({ ...prev, size: 20 }));
+    if (revived) {
+      setGameOver(false); // Game continues after revive
       playSound('powerup', settings.soundEnabled);
       vibrate(300, settings.vibrateEnabled);
     } else {
       setGameOver(true);
-      endGame(currentPoints);
-      
-      // Use a life when game ends
-      useLife();
+      endGame(currentPoints); // Use the context's endGame
+      useLife(); // Use a life when game ends (if not auto-revived)
     }
   };
 
@@ -591,7 +587,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       generateBots();
       generateFoods();
       gameStartTime.current = Date.now();
-      startGame();
+      startGame(); // Use the context's startGame
     }
   };
 

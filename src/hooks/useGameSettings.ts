@@ -9,6 +9,7 @@ const INITIAL_SETTINGS: GameSettings = {
   foodColorMode: 'fixed',
   selectedFoodColor: FOOD_COLORS.RED,
   selectedBackgroundColor: 'gradient',
+  selectedCosmetic: null, // Added selectedCosmetic to initial settings
 };
 
 export function useGameSettings() {
@@ -19,8 +20,19 @@ export function useGameSettings() {
     showSuccess('Settings updated!');
   };
 
+  const setSelectedCosmetic = (cosmeticId: string | null) => {
+    setSettings(prev => ({ ...prev, selectedCosmetic: cosmeticId }));
+  };
+
+  const resetSettings = () => {
+    setSettings(INITIAL_SETTINGS);
+  };
+
   return {
     settings,
     updateSettings,
+    selectedCosmetic: settings.selectedCosmetic, // Expose selectedCosmetic directly
+    setSelectedCosmetic,
+    resetSettings,
   };
 }
