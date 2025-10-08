@@ -59,6 +59,7 @@ interface GameContextType {
   // From usePlayer
   playerSize: number;
   growPlayer: (amount: number) => void;
+  resetPlayerSize: () => void;
 
   // From useGameLifecycle
   gameActive: boolean;

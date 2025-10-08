@@ -3,9 +3,10 @@ import { useLocalStorage } from './useLocalStorage';
 import { CHALLENGE_TYPES } from '../constants/gameConstants';
 import { Challenge } from '../types/gameTypes';
 import { showSuccess } from '../utils/toast';
+import { GameStats } from './useGameStats'; // Import GameStats
 
 interface GameStatsSetter {
-  setStats: (updater: (prevStats: any) => any) => void;
+  setStats: (updater: (prevStats: GameStats) => GameStats) => void;
 }
 
 const INITIAL_CHALLENGES: Challenge[] = [
@@ -55,14 +56,14 @@ export function useChallenges(gameStatsSetter: GameStatsSetter) {
   const [challenges, setChallenges] = useLocalStorage<Challenge[]>('agarGameChallenges', INITIAL_CHALLENGES);
 
   const updateChallengeProgress = useCallback((challengeType: string, value: number) => {
-    setChallenges(prev => 
-      prev.map(challenge => {
+    setChallenges((prev: Challenge[]) => 
+      prev.map((challenge: Challenge) => {
         if (challenge.type === challengeType && !challenge.completed) {
           const newValue = challenge.currentValue + value;
           const completed = newValue >= challenge.targetValue;
           
           if (completed && !challenge.completed) {
-            gameStatsSetter.setStats(prevStats => ({ 
+            gameStatsSetter.setStats((prevStats: GameStats) => ({ 
               ...prevStats,
               totalPoints: prevStats.totalPoints + challenge.reward,
             }));
@@ -84,7 +85,7 @@ export function useChallenges(gameStatsSetter: GameStatsSetter) {
     const challenge = challenges.find(c => c.id === challengeId);
     if (!challenge || !challenge.completed) return;
 
-    gameStatsSetter.setStats(prev => ({ 
+    gameStatsSetter.setStats((prev: GameStats) => ({ 
       ...prev,
       totalPoints: prev.totalPoints + challenge.reward,
     }));
