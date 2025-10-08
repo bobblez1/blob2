@@ -1,20 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { UPGRADE_IDS, CHALLENGE_TYPES } from '../constants/gameConstants';
-import { GameSettings, Upgrade, Challenge, LootReward } from '../types/gameTypes';
+import { GameSettings, Upgrade, Challenge, LootReward, ActivePowerUp } from '../types/gameTypes'; // Import ActivePowerUp
 import { FOOD_COLORS } from '../constants/gameConstants';
 import { showSuccess } from '../utils/toast';
 import { generateUniqueId } from '../utils/gameUtils';
 import { useGameSettings } from '../hooks/useGameSettings';
 import { useGameStats } from '../hooks/useGameStats';
 import { useGameProgression } from '../hooks/useGameProgression';
-import { useGameEconomy } from '../hooks/useGameEconomy'; // Import the new hook
-
-interface ActivePowerUp {
-  id: string;
-  name: string;
-  expiresAt: number;
-}
+import { useGameEconomy } from '../hooks/useGameEconomy';
+import { useActivePowerUps } from '../hooks/useActivePowerUps'; // Import the new hook
 
 interface DailyDeal {
   upgradeId: string;
@@ -48,7 +43,7 @@ interface GameContextType {
   resetAllData: () => void;
   updateChallengeProgress: (challengeType: string, value: number) => void;
   claimChallengeReward: (challengeId: string) => void;
-  activatePowerUp: (powerUpId: string, allUpgrades: Upgrade[]) => void;
+  activatePowerUp: (powerUpId: string) => void; // Updated signature
   refillLives: ReturnType<typeof useGameStats>['refillLives'];
   setGameMode: (mode: 'classic' | 'timeAttack' | 'battleRoyale' | 'team') => void;
   setSelectedTeam: (team: 'red' | 'blue') => void;
@@ -63,30 +58,11 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const { stats, setStats, currentPoints, setCurrentPoints, updateStats, finalizeGameStats, useLife, refillLives, resetStats } = useGameStats();
   const { settings, updateSettings } = useGameSettings();
-  const [activePowerUps, setActivePowerUps] = useState<ActivePowerUp[]>([]);
   const [selectedCosmetic, setSelectedCosmetic] = useLocalStorage<string | null>('agarSelectedCosmetic', null);
   const [gameActive, setGameActive] = useState(false);
   const [playerSize, setPlayerSize] = useState(20);
   const [gameMode, setGameMode] = useState<'classic' | 'timeAttack' | 'battleRoyale' | 'team'>('classic');
   const [selectedTeam, setSelectedTeam] = useState<'red' | 'blue'>('red');
-
-  // Define activatePowerUp here, accepting allUpgrades as an argument
-  const activatePowerUp = useCallback((powerUpId: string, allUpgrades: Upgrade[]) => {
-    const upgrade = allUpgrades.find(u => u.id === powerUpId);
-    if (!upgrade || !upgrade.effectDuration) return;
-
-    const expiresAt = Date.now() + upgrade.effectDuration;
-    
-    setActivePowerUps(prev => [
-      ...prev.filter(p => p.id !== powerUpId),
-      {
-        id: powerUpId,
-        name: upgrade.name,
-        expiresAt,
-      }
-    ]);
-    showSuccess(`${upgrade.name} activated!`);
-  }, []); // No dependency on `upgrades` here, as it's passed as an argument.
 
   const {
     upgrades,
@@ -97,29 +73,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     resetProgression,
     getSpeedBoostMultiplier,
     getPointMultiplier,
-  } = useGameProgression({ stats, setStats }, refillLives, activatePowerUp); // Pass activatePowerUp here.
+  } = useGameProgression({ stats, setStats }, refillLives, (powerUpId: string) => activatePowerUp(powerUpId)); // Pass activatePowerUp here.
+
+  const { activePowerUps, activatePowerUp, resetActivePowerUps } = useActivePowerUps(upgrades); // Use the new hook
 
   const {
     telegramStars,
     dailyDeal,
-    purchaseWithStars,
-    openLootBox,
+    purchaseWithStars: economyPurchaseWithStars,
+    openLootBox: economyOpenLootBox,
     resetEconomy,
   } = useGameEconomy(
     { setStats },
     { upgrades, purchaseUpgrade: progressionPurchaseUpgrade },
     { activatePowerUp }
   );
-
-  // Clean up expired power-ups
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setActivePowerUps(prev => prev.filter(powerUp => powerUp.expiresAt > now));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
   
   const growPlayer = (amount: number) => {
     setPlayerSize(prev => Math.max(5, prev + amount));
@@ -129,6 +97,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const purchaseUpgrade = useCallback((upgradeId: string, priceOverride?: number) => {
     progressionPurchaseUpgrade(upgradeId, priceOverride);
   }, [progressionPurchaseUpgrade]);
+
+  // Wrapper for economyPurchaseWithStars
+  const purchaseWithStars = useCallback((upgradeId: string) => {
+    economyPurchaseWithStars(upgradeId);
+  }, [economyPurchaseWithStars]);
+
+  // Wrapper for economyOpenLootBox
+  const openLootBox = useCallback((boxType: string): LootReward[] => {
+    return economyOpenLootBox(boxType);
+  }, [economyOpenLootBox]);
 
   const startGame = () => {
     console.log('Starting game with mode:', gameMode);
@@ -156,11 +134,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const resetAllData = () => {
     resetStats();
-    resetProgression(); // Reset upgrades and challenges via useGameProgression
-    resetEconomy(); // Reset economy data
+    resetProgression();
+    resetEconomy();
+    resetActivePowerUps(); // Reset active power-ups
     updateSettings({});
-    setActivePowerUps([]);
-    setSelectedCosmetic(null); // Reset selected cosmetic
+    setSelectedCosmetic(null);
     showSuccess('All game data reset!');
   };
 

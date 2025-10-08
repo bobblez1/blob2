@@ -66,6 +66,12 @@ export interface Challenge {
   type: 'eat_blobs' | 'survive_time' | 'daily_games' | 'win_streak';
 }
 
+export interface ActivePowerUp {
+  id: string;
+  name: string;
+  expiresAt: number;
+}
+
 interface DailyDeal {
   upgradeId: string;
   discountPercent: number;
