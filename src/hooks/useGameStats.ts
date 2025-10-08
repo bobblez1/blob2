@@ -4,7 +4,7 @@ import { generateUniqueId } from '../utils/gameUtils';
 import { showSuccess } from '../utils/toast';
 import { supabase } from '../lib/supabase'; // Import supabase client
 
-interface GameStats {
+export interface GameStats {
   totalPoints: number;
   gamesPlayed: number;
   highScore: number;
@@ -35,10 +35,10 @@ export function useGameStats() {
     const updatePlayerId = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id && stats.playerId !== session.user.id) {
-        setStats(prev => ({ ...prev, playerId: session.user.id }));
+        setStats((prev: GameStats) => ({ ...prev, playerId: session.user.id }));
       } else if (!session?.user?.id && !stats.playerId.startsWith('guest_')) {
         // If user logs out, reset to a guest ID
-        setStats(prev => ({ ...prev, playerId: 'guest_' + generateUniqueId() }));
+        setStats((prev: GameStats) => ({ ...prev, playerId: 'guest_' + generateUniqueId() }));
       }
     };
 
@@ -46,9 +46,9 @@ export function useGameStats() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user?.id && stats.playerId !== session.user.id) {
-        setStats(prev => ({ ...prev, playerId: session.user.id }));
+        setStats((prev: GameStats) => ({ ...prev, playerId: session.user.id }));
       } else if (!session?.user?.id && !stats.playerId.startsWith('guest_')) {
-        setStats(prev => ({ ...prev, playerId: 'guest_' + generateUniqueId() }));
+        setStats((prev: GameStats) => ({ ...prev, playerId: 'guest_' + generateUniqueId() }));
       }
     });
 
@@ -140,5 +140,6 @@ export function useGameStats() {
     useLife,
     refillLives,
     resetStats,
+    setStats, // Export setStats for use in other hooks
   };
 }

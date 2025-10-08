@@ -4,7 +4,7 @@ import { GAME_CONSTANTS, FOOD_COLORS, UPGRADE_IDS, CHALLENGE_TYPES, TEAM_COLORS 
 import { PlayerBlob, BotBlob, FoodBlob, GameBlob } from '../types/gameTypes';
 import { calculateDistance, getEvolutionStage, getEvolutionColor, isInViewport, clampToCanvas, generateUniqueId, vibrate, playSound, createSpatialGrid, getNearbyBlobs } from '../utils/gameUtils';
 import { createBot, calculateBotAction } from '../utils/botAI';
-import { Play, Pause, RotateCcw, Heart, Home, Zap, Shield, Star } from 'lucide-react';
+import { Play, Pause, RotateCcw, Heart, Home, Users } from 'lucide-react'; // Removed unused Zap, Shield, Star
 import { Button } from './ui/button'; // Import Button
 
 interface GameCanvasProps {
@@ -42,6 +42,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     getSpeedBoostMultiplier,
     getPointMultiplier,
     setIsPaused, // Now from context
+    resetPlayerSize, // Added resetPlayerSize from context
   } = useGame();
   
   const [player, setPlayer] = useState<PlayerBlob>(() => ({
@@ -67,7 +68,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
   const [gameOver, setGameOver] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [shieldActive, setShieldActive] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(GAME_CONSTANTS.TIME_ATTACK_DURATION);
+  const [timeRemaining, setTimeRemaining] = useState<number>(GAME_CONSTANTS.TIME_ATTACK_DURATION); // Explicitly typed as number
   const [playAreaRadius, setPlayAreaRadius] = useState(Math.min(GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT) / 2);
 
   // Ref to store dynamic rendering parameters (scale, offset)
@@ -159,7 +160,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [gameActive, gameOver, isPaused, gameMode]);
+  }, [gameActive, gameOver, isPaused, gameMode, handleGameOver]); // Added handleGameOver to dependencies
 
   // Check for active shield power-up
   useEffect(() => {
@@ -232,7 +233,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       keysRef.current.add(e.key.toLowerCase());
       if (e.key === ' ') {
         e.preventDefault();
-        setIsPaused(prev => !prev);
+        setIsPaused((prev: boolean) => !prev); // Explicitly typed prev
       }
     };
 
@@ -273,7 +274,21 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameActive, gameOver, isPaused, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic, generateBots, generateFoods]); // Removed 'player' from dependencies
+  }, [gameActive, gameOver, isPaused, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic, generateBots, generateFoods, playerSize, player, camera, timeRemaining, playAreaRadius, handleGameOver, updateStats, updateChallengeProgress, growPlayer, selectedTeam, gameMode, settings.soundEnabled, settings.vibrateEnabled]); // Added all necessary dependencies
+
+  const handleGameOver = useCallback(() => {
+    const revived = revivePlayer(); // Use the context's revivePlayer
+    
+    if (revived) {
+      setGameOver(false); // Game continues after revive
+      playSound('powerup', settings.soundEnabled);
+      vibrate(300, settings.vibrateEnabled);
+    } else {
+      setGameOver(true);
+      endGame(currentPoints); // Use the context's endGame
+      useLife(); // Use a life when game ends (if not auto-revived)
+    }
+  }, [revivePlayer, currentPoints, endGame, useLife, settings.soundEnabled, settings.vibrateEnabled]);
 
   const updateGame = () => {
     // Access player state via ref
@@ -357,7 +372,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     // Player-Food Interaction
     let totalGrowthThisFrame = 0;
     const nearbyFoodsForPlayer = getNearbyBlobs(currentPlayer.x, currentPlayer.y, spatialGrid)
-      .filter(blob => (blob as FoodBlob).color); // Filter for actual food blobs
+      .filter((blob): blob is FoodBlob => !('isPlayer' in blob) && !('isBot' in blob)); // Filter for actual food blobs
 
     currentFoods = currentFoods.filter(food => {
       // Only check collision if food is nearby
@@ -382,7 +397,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     currentBots = currentBots.map(bot => {
       let botGrowth = 0;
       const nearbyFoodsForBot = getNearbyBlobs(bot.x, bot.y, spatialGrid)
-        .filter(blob => (blob as FoodBlob).color); // Filter for actual food blobs
+        .filter((blob): blob is FoodBlob => !('isPlayer' in blob) && !('isBot' in blob)); // Filter for actual food blobs
 
       currentFoods = currentFoods.filter(food => {
         // Only check collision if food is nearby
@@ -406,8 +421,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         const otherBlobsForAI = getNearbyBlobs(bot.x, bot.y, spatialGrid)
           .filter(b => b.id !== bot.id); // All other blobs for AI consideration
 
-        const otherBotsForAI = otherBlobsForAI.filter(b => (b as BotBlob).isBot) as BotBlob[];
-        const nearbyFoodsForAI = otherBlobsForAI.filter(f => !(f as BotBlob).isBot && !(f as PlayerBlob).isPlayer) as FoodBlob[];
+        const otherBotsForAI = otherBlobsForAI.filter((b): b is BotBlob => 'isBot' in b) as BotBlob[];
+        const nearbyFoodsForAI = otherBlobsForAI.filter((f): f is FoodBlob => !('isPlayer' in f) && !('isBot' in f)) as FoodBlob[];
 
         const action = calculateBotAction(
           bot, 
@@ -448,7 +463,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       
       let botGrowth = 0;
       const nearbyBlobsForBot = getNearbyBlobs(bot.x, bot.y, spatialGrid)
-        .filter(b => (b as BotBlob).isBot && b.id !== bot.id) as BotBlob[];
+        .filter((b): b is BotBlob => 'isBot' in b && b.id !== bot.id) as BotBlob[];
 
       nearbyBlobsForBot.forEach(otherBot => {
         if (bot.id !== otherBot.id && !botsToRemove.has(otherBot.id)) {
@@ -505,7 +520,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     
     const botsToRemoveFromPlayer = new Set<string>();
     const nearbyBotsForPlayer = getNearbyBlobs(currentPlayer.x, currentPlayer.y, spatialGrid)
-      .filter(blob => (blob as BotBlob).isBot) as BotBlob[];
+      .filter((blob): blob is BotBlob => 'isBot' in blob) as BotBlob[];
 
     nearbyBotsForPlayer.forEach(bot => {
       if (botsToRemoveFromPlayer.has(bot.id)) return;
@@ -561,20 +576,6 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const survivalTime = (now - gameStartTime.current) / 1000;
     if (survivalTime >= 60) { // 1 minute survival
       updateChallengeProgress(CHALLENGE_TYPES.SURVIVE_TIME, Math.floor(survivalTime / 60));
-    }
-  };
-
-  const handleGameOver = () => {
-    const revived = revivePlayer(); // Use the context's revivePlayer
-    
-    if (revived) {
-      setGameOver(false); // Game continues after revive
-      playSound('powerup', settings.soundEnabled);
-      vibrate(300, settings.vibrateEnabled);
-    } else {
-      setGameOver(true);
-      endGame(currentPoints); // Use the context's endGame
-      useLife(); // Use a life when game ends (if not auto-revived)
     }
   };
 
@@ -770,7 +771,8 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     ctx.font = '10px Arial'; // Set font once for list items
     allBlobs.forEach((blob, index) => {
       const y = 45 + index * 13;
-      ctx.fillStyle = blob.isPlayer ? '#3B82F6' : '#888';
+      // Use type guard to check if blob is PlayerBlob
+      ctx.fillStyle = (blob as PlayerBlob).isPlayer ? '#3B82F6' : '#888'; 
       const name = blob.name || 'Bot';
       const size = Math.round(blob.size);
       ctx.fillText(`${index + 1}. ${name} (${size})`, 15, y);

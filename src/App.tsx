@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import GameCanvas from './components/GameCanvas';
 import Dashboard from './components/Dashboard';
 import Store from './components/Store';
@@ -7,14 +7,13 @@ import HomeScreen from './components/HomeScreen';
 import LobbyScreen from './components/LobbyScreen';
 import GameRoomScreen from './components/GameRoomScreen';
 import { GameProvider } from './context/GameContext';
-import { useGame } from './context/GameContext';
+import { useGame } from './context/GameContext'; // Keep useGame as it's used for currentRoom
 import { SessionContextProvider, useSession } from './context/SessionContext'; // Import SessionContextProvider and useSession
 
 export type Screen = 'home' | 'game' | 'dashboard' | 'store' | 'settings' | 'lobby' | 'gameRoom';
 
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-  const { currentRoom } = useGame();
   const { session, isLoading } = useSession(); // Use the session context
 
   // If session is loading or not authenticated, SessionContextProvider will handle rendering Login

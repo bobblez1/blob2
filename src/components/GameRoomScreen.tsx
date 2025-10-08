@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
-import { ArrowLeft, User, CheckCircle, XCircle, Play, Crown, Swords, Clock, Shield } from 'lucide-react';
+import { ArrowLeft, User, CheckCircle, XCircle, Play, Crown, Swords, Clock, Shield, Users } from 'lucide-react'; // Added Users icon
 import { Button } from './ui/button';
-import { RoomPlayer, GameMode } from '../types/gameTypes';
+import { RoomPlayer } from '../types/gameTypes';
+import { GameMode } from '../hooks/useGameSession'; // Corrected import path for GameMode
 import { showError, showSuccess } from '../utils/toast';
 
 interface GameRoomScreenProps {
@@ -18,7 +19,7 @@ function GameRoomScreen({ onBackToLobby, onStartGame }: GameRoomScreenProps) {
     // Reset ready status when entering a new room
     setIsReady(false);
     setPlayerReady(false);
-  }, [currentRoom?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentRoom?.id, setPlayerReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLeaveRoom = async () => {
     await leaveRoom();

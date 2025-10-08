@@ -1,4 +1,4 @@
-import { BotBlob, PlayerBlob, FoodBlob, GameBlob } from '../types/gameTypes';
+import { BotBlob, PlayerBlob, FoodBlob } from '../types/gameTypes'; // Removed unused GameBlob
 import { GAME_CONSTANTS, BOT_COLORS, BOT_NAMES } from '../constants/gameConstants';
 import { calculateDistance, clampToCanvas, generateUniqueId } from './gameUtils';
 

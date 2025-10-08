@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { CHALLENGE_TYPES } from '../constants/gameConstants';
 import { Challenge } from '../types/gameTypes';
@@ -79,7 +79,7 @@ export function useChallenges(gameStatsSetter: GameStatsSetter) {
         return challenge;
       })
     );
-  }, [gameStatsSetter]);
+  }, [gameStatsSetter, setChallenges]);
 
   const claimChallengeReward = useCallback((challengeId: string) => {
     const challenge = challenges.find(c => c.id === challengeId);

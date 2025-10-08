@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { Trophy, Star, Heart, TrendingUp, Gamepad2, Target, ArrowLeft, Award, Calendar, Zap, Gift, CheckCircle } from 'lucide-react';
+import { Trophy, Star, Heart, TrendingUp, Gamepad2, Target, ArrowLeft, Award, Gift, CheckCircle } from 'lucide-react'; // Removed unused Calendar, Zap
 import { Button } from './ui/button'; // Import Button
 
 interface DashboardProps {
@@ -8,7 +8,7 @@ interface DashboardProps {
 }
 
 function Dashboard({ onBack }: DashboardProps) {
-  const { stats, upgrades, challenges, claimChallengeReward } = useGame();
+  const { stats, upgrades, challenges } = useGame(); // Removed unused claimChallengeReward
   const [selectedTab, setSelectedTab] = useState<'stats' | 'achievements' | 'challenges'>('stats');
 
   const ownedUpgrades = upgrades.filter(u => u.owned);

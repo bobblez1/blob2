@@ -105,6 +105,7 @@ export interface Room {
 export interface RoomPlayer {
   id: string; // This will be the player's unique ID (e.g., from useGameStats)
   room_id: string;
+  player_id: string; // Added player_id to RoomPlayer interface
   player_name: string;
   team?: 'red' | 'blue';
   is_ready: boolean;

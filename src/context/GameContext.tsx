@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { UPGRADE_IDS, CHALLENGE_TYPES } from '../constants/gameConstants';
+import { UPGRADE_IDS } from '../constants/gameConstants'; // Keep UPGRADE_IDS as it's used
 import { GameSettings, Upgrade, Challenge, LootReward, ActivePowerUp, Room, RoomPlayer, RoomStatus } from '../types/gameTypes';
 import { showSuccess, showError } from '../utils/toast';
 import { supabase } from '../lib/supabase'; // Import Supabase client
@@ -28,6 +28,7 @@ interface GameContextType {
   updateStats: ReturnType<typeof useGameStats>['updateStats'];
   useLife: ReturnType<typeof useGameStats>['useLife'];
   refillLives: ReturnType<typeof useGameStats>['refillLives'];
+  resetPlayerSize: ReturnType<typeof usePlayer>['resetPlayerSize']; // Added resetPlayerSize to context
 
   // From useUpgrades
   upgrades: Upgrade[];
@@ -59,7 +60,6 @@ interface GameContextType {
   // From usePlayer
   playerSize: number;
   growPlayer: (amount: number) => void;
-  resetPlayerSize: () => void;
 
   // From useGameLifecycle
   gameActive: boolean;
@@ -93,7 +93,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // Core Game State Hooks
   const { stats, setStats, currentPoints, setCurrentPoints, updateStats, finalizeGameStats, useLife, refillLives, resetStats } = useGameStats();
   const { settings, updateSettings, selectedCosmetic, setSelectedCosmetic, resetSettings } = useGameSettings();
-  const { playerSize, setPlayerSize, growPlayer, resetPlayerSize } = usePlayer();
+  const { playerSize, growPlayer, resetPlayerSize } = usePlayer(); // Removed setPlayerSize as it's not directly used here
   const { gameMode, setGameMode, selectedTeam, setSelectedTeam, resetGameSession } = useGameSession();
 
   // Progression & Economy Hooks (depend on core state)
@@ -133,7 +133,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [progressionPurchaseUpgrade]);
 
   const purchaseWithStars = useCallback((upgradeId: string) => {
-    economyPurchaseWithStars(upgradeId); // Corrected: Removed extra 'upgrades' argument
+    economyPurchaseWithStars(upgradeId);
   }, [economyPurchaseWithStars]);
 
   const openLootBox = useCallback((boxType: string): LootReward[] => {
@@ -238,7 +238,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Add player to room_players
-      const { data: newPlayer, error: playerError } = await supabase
+      const { error: playerError } = await supabase
         .from('room_players')
         .insert({
           room_id: roomId,
@@ -454,6 +454,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       updateStats,
       useLife,
       refillLives,
+      resetPlayerSize, // Added to context
       upgrades,
       purchaseUpgrade,
       getSpeedBoostMultiplier,
