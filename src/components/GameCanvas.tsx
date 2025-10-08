@@ -53,6 +53,13 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     isPlayer: true as const,
     name: 'You',
   }));
+
+  // Ref to hold the latest player state for the game loop
+  const playerRef = useRef<PlayerBlob>(player);
+  // Effect to keep playerRef in sync with player state and playerSize from context
+  useEffect(() => {
+    playerRef.current = { ...player, size: playerSize };
+  }, [player, playerSize]);
   
   const [bots, setBots] = useState<BotBlob[]>([]);
   const [foods, setFoods] = useState<FoodBlob[]>([]);
@@ -266,21 +273,24 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameActive, gameOver, isPaused, player, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic, playerSize]); // Added playerSize to dependencies
+  }, [gameActive, gameOver, isPaused, bots, foods, activePowerUps, settings.selectedBackgroundColor, getSpeedBoostMultiplier, getPointMultiplier, selectedCosmetic, generateBots, generateFoods]); // Removed 'player' from dependencies
 
   const updateGame = () => {
+    // Access player state via ref
+    const currentPlayer = playerRef.current;
+
     // Create mutable copies for processing
     let currentFoods = [...foods];
     let currentBots = [...bots];
     const now = Date.now();
 
     // Create spatial grid for efficient collision detection
-    const allBlobs: GameBlob[] = [{ ...player, size: playerSize }, ...currentBots, ...currentFoods];
+    const allBlobs: GameBlob[] = [currentPlayer, ...currentBots, ...currentFoods];
     const spatialGrid = createSpatialGrid(allBlobs, 100); // Cell size 100
 
     // Blob decay mechanic - slowly shrink if inactive
     if (now - lastDecayTime.current > GAME_CONSTANTS.DECAY_INTERVAL) {
-      if (playerSize > GAME_CONSTANTS.PLAYER_MIN_SIZE) {
+      if (currentPlayer.size > GAME_CONSTANTS.PLAYER_MIN_SIZE) {
         growPlayer(-GAME_CONSTANTS.DECAY_AMOUNT);
       }
       lastDecayTime.current = now;
@@ -298,7 +308,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       // Calculate speed based on size (bigger = slower)
       const activeSpeedBoost = getSpeedBoostMultiplier(); // Use new helper
       const baseSpeed = GAME_CONSTANTS.PLAYER_BASE_SPEED * (1 + activeSpeedBoost);
-      const sizeSpeedFactor = Math.max(0.3, 1 - (playerSize - GAME_CONSTANTS.PLAYER_MIN_SIZE) / 200);
+      const sizeSpeedFactor = Math.max(0.3, 1 - (currentPlayer.size - GAME_CONSTANTS.PLAYER_MIN_SIZE) / 200);
       const speed = baseSpeed * sizeSpeedFactor;
       
       let moveX = 0;
@@ -326,7 +336,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       
       // Apply movement
       if (moveX !== 0 || moveY !== 0) {
-        const clamped = clampToCanvas(player.x + moveX, player.y + moveY, playerSize / 2);
+        const clamped = clampToCanvas(currentPlayer.x + moveX, currentPlayer.y + moveY, currentPlayer.size / 2);
         setPlayer(prev => ({
           ...prev,
           x: clamped.x,
@@ -340,21 +350,20 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     
     // Update camera to follow player
     setCamera({
-      x: Math.max(0, Math.min(GAME_CONSTANTS.CANVAS_WIDTH - GAME_CONSTANTS.VIEWPORT_WIDTH, player.x - GAME_CONSTANTS.VIEWPORT_WIDTH / 2)),
-      y: Math.max(0, Math.min(GAME_CONSTANTS.CANVAS_HEIGHT - GAME_CONSTANTS.VIEWPORT_HEIGHT, player.y - GAME_CONSTANTS.VIEWPORT_HEIGHT / 2)),
+      x: Math.max(0, Math.min(GAME_CONSTANTS.CANVAS_WIDTH - GAME_CONSTANTS.VIEWPORT_WIDTH, currentPlayer.x - GAME_CONSTANTS.VIEWPORT_WIDTH / 2)),
+      y: Math.max(0, Math.min(GAME_CONSTANTS.CANVAS_HEIGHT - GAME_CONSTANTS.VIEWPORT_HEIGHT, currentPlayer.y - GAME_CONSTANTS.VIEWPORT_HEIGHT / 2)),
     });
 
     // Player-Food Interaction
     let totalGrowthThisFrame = 0;
-    const playerBlobForGrid = { ...player, size: playerSize };
-    const nearbyFoodsForPlayer = getNearbyBlobs(playerBlobForGrid.x, playerBlobForGrid.y, spatialGrid)
+    const nearbyFoodsForPlayer = getNearbyBlobs(currentPlayer.x, currentPlayer.y, spatialGrid)
       .filter(blob => (blob as FoodBlob).color); // Filter for actual food blobs
 
     currentFoods = currentFoods.filter(food => {
       // Only check collision if food is nearby
       if (nearbyFoodsForPlayer.some(nf => nf.id === food.id)) {
-        const distance = calculateDistance(player.x, player.y, food.x, food.y);
-        if (distance < playerSize / 2 + food.size / 2) {
+        const distance = calculateDistance(currentPlayer.x, currentPlayer.y, food.x, food.y);
+        if (distance < currentPlayer.size / 2 + food.size / 2) {
           totalGrowthThisFrame += GAME_CONSTANTS.FOOD_GROWTH;
           playSound('eat', settings.soundEnabled);
           vibrate(50, settings.vibrateEnabled);
@@ -402,7 +411,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
         const action = calculateBotAction(
           bot, 
-          { ...player, size: playerSize } as PlayerBlob, 
+          currentPlayer as PlayerBlob, 
           nearbyFoodsForAI, 
           otherBotsForAI, 
           gameMode, 
@@ -477,7 +486,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     if (gameMode === 'battleRoyale') {
       const centerX = GAME_CONSTANTS.CANVAS_WIDTH / 2;
       const centerY = GAME_CONSTANTS.CANVAS_HEIGHT / 2;
-      const distanceFromCenter = calculateDistance(player.x, player.y, centerX, centerY);
+      const distanceFromCenter = calculateDistance(currentPlayer.x, currentPlayer.y, centerX, centerY);
       
       if (distanceFromCenter > playAreaRadius) {
         growPlayer(-GAME_CONSTANTS.DECAY_AMOUNT);
@@ -495,20 +504,20 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const powerUpMultiplier = activePowerUps.find(p => p.id === UPGRADE_IDS.DOUBLE_POINTS) ? 2 : 1;
     
     const botsToRemoveFromPlayer = new Set<string>();
-    const nearbyBotsForPlayer = getNearbyBlobs(player.x, player.y, spatialGrid)
+    const nearbyBotsForPlayer = getNearbyBlobs(currentPlayer.x, currentPlayer.y, spatialGrid)
       .filter(blob => (blob as BotBlob).isBot) as BotBlob[];
 
     nearbyBotsForPlayer.forEach(bot => {
       if (botsToRemoveFromPlayer.has(bot.id)) return;
       
-      const distance = calculateDistance(player.x, player.y, bot.x, bot.y);
+      const distance = calculateDistance(currentPlayer.x, currentPlayer.y, bot.x, bot.y);
       
-      if (distance < playerSize / 2 + bot.size / 2) {
+      if (distance < currentPlayer.size / 2 + bot.size / 2) {
         // In team mode, player can only eat bots from different teams
         const canEatBot = gameMode === 'team' ? selectedTeam !== bot.team : true;
         const canBotEatPlayer = gameMode === 'team' ? selectedTeam !== bot.team : true;
         
-        if (canEatBot && (playerSize > bot.size || hasInstantKill)) {
+        if (canEatBot && (currentPlayer.size > bot.size || hasInstantKill)) {
           // Player eats bot - gain points and growth
           const basePoints = Math.floor(bot.size / 2);
           const totalPoints = basePoints * permanentPointMultiplier * powerUpMultiplier;
@@ -532,7 +541,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
           }
         } else if (canBotEatPlayer && !shieldActive) {
           // Bot eats player - game over (only if no shield and bot is larger)
-          if (bot.size > playerSize) {
+          if (bot.size > currentPlayer.size) {
             playSound('death', settings.soundEnabled);
             vibrate([200, 100, 200], settings.vibrateEnabled);
             handleGameOver();
@@ -637,7 +646,7 @@ function GameCanvas({ onGameEnd }: GameCanvasProps) {
       // Left rectangle (between top and bottom)
       ctx.fillRect(0, Math.max(0, centerY - playAreaRadius), Math.max(0, centerX - playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
       // Right rectangle (between top and bottom)
-      ctx.fillRect(Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.max(0, centerY - playAreaRadius), GAME_CONSTANTS.VIEWPORT_WIDTH - Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
+      ctx.fillRect(Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.max(0, centerY + playAreaRadius), GAME_CONSTANTS.VIEWPORT_WIDTH - Math.min(GAME_CONSTANTS.VIEWPORT_WIDTH, centerX + playAreaRadius), Math.min(GAME_CONSTANTS.VIEWPORT_HEIGHT, centerY + playAreaRadius) - Math.max(0, centerY - playAreaRadius));
 
       // Draw safe zone border
       ctx.strokeStyle = '#00FF00';
