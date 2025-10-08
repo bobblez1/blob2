@@ -10,7 +10,7 @@ interface GameStatsSetter {
 }
 
 interface GameContextActions {
-  activatePowerUp: (powerUpId: string) => void;
+  activatePowerUp: (powerUpId: string, allUpgrades: Upgrade[]) => void; // Corrected signature
   refillLives: () => void;
 }
 
@@ -173,7 +173,7 @@ export function useUpgrades(
     if (!upgrade || gameStatsSetter.stats.totalPoints < finalPrice) return;
 
     if (upgrade.category === 'powerup') {
-      activatePowerUp(upgradeId);
+      activatePowerUp(upgradeId, upgrades); // Corrected: Pass 'upgrades'
     } else if (upgrade.category === 'utility') {
       if (upgradeId === UPGRADE_IDS.EXTRA_LIVES) {
         refillLives();

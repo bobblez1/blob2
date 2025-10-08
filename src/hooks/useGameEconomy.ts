@@ -20,7 +20,7 @@ interface GameProgressionActions {
 }
 
 interface GameContextActions {
-  activatePowerUp: (powerUpId: string, allUpgrades: Upgrade[]) => void;
+  activatePowerUp: (powerUpId: string, allUpgrades: Upgrade[]) => void; // Corrected signature
 }
 
 export function useGameEconomy(
@@ -66,7 +66,7 @@ export function useGameEconomy(
     setTelegramStars((prev: number) => prev - starCost);
 
     if (upgrade.category === 'powerup') {
-      activatePowerUp(upgradeId, upgrades);
+      activatePowerUp(upgradeId, upgrades); // Corrected: Pass 'upgrades'
     } else if (upgrade.category === 'utility') {
       // Utility items like 'EXTRA_LIVES' are handled by useGameProgression's purchaseUpgrade
       // We can call it with a price override of 0 since stars are used.
@@ -131,7 +131,7 @@ export function useGameEconomy(
         const powerUpName = upgrades.find(u => u.id === powerUpId)?.name || 'Power-up';
         rewards.push({ type: 'powerup', value: powerUpName, rarity });
         
-        activatePowerUp(powerUpId, upgrades);
+        activatePowerUp(powerUpId, upgrades); // Corrected: Pass 'upgrades'
       }
     }
 

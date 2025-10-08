@@ -42,7 +42,7 @@ interface GameContextType {
 
   // From useActivePowerUps
   activePowerUps: ActivePowerUp[];
-  activatePowerUp: (powerUpId: string) => void;
+  activatePowerUp: (powerUpId: string, allUpgrades: Upgrade[]) => void; // Corrected signature
 
   // From useGameSettings
   settings: GameSettings;
@@ -133,8 +133,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [progressionPurchaseUpgrade]);
 
   const purchaseWithStars = useCallback((upgradeId: string) => {
-    economyPurchaseWithStars(upgradeId, upgrades); // Pass upgrades to economyPurchaseWithStars
-  }, [economyPurchaseWithStars, upgrades]);
+    economyPurchaseWithStars(upgradeId); // Corrected: Removed extra 'upgrades' argument
+  }, [economyPurchaseWithStars]);
 
   const openLootBox = useCallback((boxType: string): LootReward[] => {
     return economyOpenLootBox(boxType);
@@ -183,7 +183,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       console.error('Error creating room:', error);
       return null;
     }
-  }, [stats.playerId, stats.playerId.substring]);
+  }, [stats.playerId]);
 
   const joinRoom = useCallback(async (roomId: string): Promise<Room | null> => {
     if (!stats.playerId) {
@@ -266,7 +266,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       console.error('Error joining room:', error);
       return null;
     }
-  }, [stats.playerId, stats.playerId.substring]);
+  }, [stats.playerId]);
 
   const leaveRoom = useCallback(async () => {
     if (!currentRoom || !stats.playerId) return;
