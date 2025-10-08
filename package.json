@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "VITE_SUPABASE_PROJECT_REF=bopgytsbuyztcldrvsac vite",
+    "build": "VITE_SUPABASE_PROJECT_REF=bopgytsbuyztcldrvsac vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"

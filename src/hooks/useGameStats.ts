@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { generateUniqueId } from '../utils/gameUtils';
 import { showSuccess } from '../utils/toast';
+import { supabase } from '../lib/supabase'; // Import supabase client
 
 interface GameStats {
   totalPoints: number;
@@ -11,7 +12,7 @@ interface GameStats {
   lastLifeReset: string;
   lastLoginDate: string;
   loginStreak: number;
-  playerId: string;
+  playerId: string; // This will now be linked to Supabase auth.uid
 }
 
 const INITIAL_STATS: GameStats = {
@@ -22,12 +23,38 @@ const INITIAL_STATS: GameStats = {
   lastLifeReset: new Date().toDateString(),
   lastLoginDate: new Date().toDateString(),
   loginStreak: 1,
-  playerId: generateUniqueId(),
+  playerId: 'guest_' + generateUniqueId(), // Default to guest ID, will be overwritten by auth
 };
 
 export function useGameStats() {
   const [stats, setStats] = useLocalStorage<GameStats>('agarGameStats', INITIAL_STATS);
   const [currentPoints, setCurrentPoints] = useState(0); // Points earned in current game
+
+  // Effect to synchronize playerId with Supabase auth.uid
+  useEffect(() => {
+    const updatePlayerId = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id && stats.playerId !== session.user.id) {
+        setStats(prev => ({ ...prev, playerId: session.user.id }));
+      } else if (!session?.user?.id && !stats.playerId.startsWith('guest_')) {
+        // If user logs out, reset to a guest ID
+        setStats(prev => ({ ...prev, playerId: 'guest_' + generateUniqueId() }));
+      }
+    };
+
+    updatePlayerId(); // Initial check
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.id && stats.playerId !== session.user.id) {
+        setStats(prev => ({ ...prev, playerId: session.user.id }));
+      } else if (!session?.user?.id && !stats.playerId.startsWith('guest_')) {
+        setStats(prev => ({ ...prev, playerId: 'guest_' + generateUniqueId() }));
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [stats.playerId, setStats]);
+
 
   // Handle daily resets and login streaks
   useEffect(() => {
