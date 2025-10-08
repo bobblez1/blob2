@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { UPGRADE_IDS } from '../constants/gameConstants';
 import { Upgrade } from '../types/gameTypes';
@@ -180,8 +180,8 @@ export function useUpgrades(
         showSuccess('Lives refilled!');
       }
     } else {
-      setUpgrades(prev => 
-        prev.map(u => 
+      setUpgrades((prev: Upgrade[]) => 
+        prev.map((u: Upgrade) => 
           u.id === upgradeId ? { ...u, owned: true } : u
         )
       );

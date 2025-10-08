@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { UPGRADE_IDS } from '../constants/gameConstants';
 import { Upgrade, LootReward } from '../types/gameTypes';
@@ -63,7 +63,7 @@ export function useGameEconomy(
       return;
     }
 
-    setTelegramStars(prev => prev - starCost);
+    setTelegramStars((prev: number) => prev - starCost);
 
     if (upgrade.category === 'powerup') {
       activatePowerUp(upgradeId, upgrades);
@@ -91,7 +91,7 @@ export function useGameEconomy(
       return [];
     }
 
-    setTelegramStars(prev => prev - cost);
+    setTelegramStars((prev: number) => prev - cost);
 
     const rewards: LootReward[] = [];
     const rewardCount = boxType === 'premium_crate' ? 2 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 3);
@@ -124,7 +124,7 @@ export function useGameEconomy(
         const stars = starValues[rarity];
         rewards.push({ type: 'stars', value: stars, rarity });
         
-        setTelegramStars(prev => prev + stars);
+        setTelegramStars((prev: number) => prev + stars);
       } else {
         const powerUps = [UPGRADE_IDS.SHIELD, UPGRADE_IDS.DOUBLE_POINTS];
         const powerUpId = powerUps[Math.floor(Math.random() * powerUps.length)];

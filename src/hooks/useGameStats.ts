@@ -74,7 +74,7 @@ export function useGameStats() {
 
   const finalizeGameStats = useCallback((finalScore: number, permanentPointMultiplier: number, powerUpMultiplier: number) => {
     const totalScore = finalScore * permanentPointMultiplier * powerUpMultiplier;
-    setStats(prev => ({
+    setStats((prev: GameStats) => ({
       ...prev,
       totalPoints: prev.totalPoints + totalScore,
       gamesPlayed: prev.gamesPlayed + 1,
@@ -85,7 +85,7 @@ export function useGameStats() {
   const useLife = useCallback((): boolean => {
     if (stats.livesRemaining <= 0) return false;
     
-    setStats(prev => ({
+    setStats((prev: GameStats) => ({
       ...prev,
       livesRemaining: prev.livesRemaining - 1,
     }));
@@ -93,7 +93,7 @@ export function useGameStats() {
   }, [stats.livesRemaining, setStats]);
 
   const refillLives = useCallback(() => {
-    setStats(prev => ({
+    setStats((prev: GameStats) => ({
       ...prev,
       livesRemaining: 10,
     }));

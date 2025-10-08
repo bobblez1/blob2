@@ -36,6 +36,7 @@ export interface GameSettings {
   foodColorMode: 'fixed' | 'random';
   selectedFoodColor: string;
   selectedBackgroundColor: 'gradient' | 'white' | 'grey' | 'black'; // Added background color setting
+  selectedCosmetic: string | null; // Added selectedCosmetic to GameSettings interface
 }
 
 export interface SpatialGrid {

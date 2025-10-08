@@ -16,12 +16,12 @@ export function useGameSettings() {
   const [settings, setSettings] = useLocalStorage<GameSettings>('agarGameSettings', INITIAL_SETTINGS);
 
   const updateSettings = (newSettings: Partial<GameSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
+    setSettings((prev: GameSettings) => ({ ...prev, ...newSettings }));
     showSuccess('Settings updated!');
   };
 
   const setSelectedCosmetic = (cosmeticId: string | null) => {
-    setSettings(prev => ({ ...prev, selectedCosmetic: cosmeticId }));
+    setSettings((prev: GameSettings) => ({ ...prev, selectedCosmetic: cosmeticId }));
   };
 
   const resetSettings = () => {
