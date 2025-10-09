@@ -5,6 +5,7 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '../lib/supabase'; // Import the Supabase client
 import { showInfo, showError } from '../utils/toast'; // Import toast utilities
+import { Button } from '../components/ui/button'; // Import the Button component
 
 // Declare Telegram WebApp globally
 declare global {
@@ -75,6 +76,11 @@ function Login() {
     }
   };
 
+  const handleOpenInTelegram = () => {
+    // Replace 'blobtest_bot' with your actual bot's username
+    window.location.href = 'tg://resolve?domain=blobtest_bot&startapp';
+  };
+
   if (isTelegramWebApp) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 p-4 text-white text-center">
@@ -98,6 +104,12 @@ function Login() {
         <p className="text-gray-300 text-center mb-6">
           Please open it through a Telegram Mini App link.
         </p>
+        <Button
+          onClick={handleOpenInTelegram}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg mb-4"
+        >
+          Open with Telegram
+        </Button>
         {/* Optionally, you can keep the Supabase Auth UI for email/password as a fallback for development/testing */}
         <Auth
           supabaseClient={supabase}
